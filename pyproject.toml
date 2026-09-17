@@ -1,0 +1,20 @@
+[project]
+name = "caddie"
+version = "0.1.0"
+description = "Caddie: a plugin-based harness for connector- and skill-driven analytics notebooks"
+readme = "README.md"
+authors = [
+    { name = "Matt Gardner", email = "matt.w.gardner@gmail.com" }
+]
+requires-python = "==3.14.*"
+dependencies = [
+    "marimo>=0.9",
+    "plotly>=5.24",
+]
+
+[project.scripts]
+caddie = "caddie:main"
+
+[build-system]
+requires = ["uv_build>=0.11.5,<0.12.0"]
+build-backend = "uv_build"
