@@ -1,0 +1,18 @@
+"""Caddie's command-line entry point (`caddie <subcommand>`)."""
+
+import argparse
+
+from caddie.install.command import add_subparser as add_install_subparser
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="caddie")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    add_install_subparser(subparsers)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    raise SystemExit(args.handler(args))

@@ -1,2 +1,3 @@
-def main() -> None:
-    print("Hello from caddie!")
+from caddie.cli import main
+
+__all__ = ["main"]
