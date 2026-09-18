@@ -3,12 +3,14 @@
 import argparse
 
 from caddie.install.command import add_subparser as add_install_subparser
+from caddie.update.command import add_subparser as add_update_subparser
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="caddie")
     subparsers = parser.add_subparsers(dest="command", required=True)
     add_install_subparser(subparsers)
+    add_update_subparser(subparsers)
     return parser
 
 

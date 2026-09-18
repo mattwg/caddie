@@ -12,3 +12,18 @@ def ensure_uv_installed() -> None:
         shell=True,
         check=True,
     )
+
+
+def upgrade_uv() -> None:
+    """Best-effort re-check of the `uv` version; a no-op when already current.
+
+    Some installs of `uv` (e.g. via a system package manager) don't
+    support `uv self update`; that's not a caddie-update failure, so
+    it's swallowed rather than propagated.
+    """
+    ensure_uv_installed()
+    subprocess.run(
+        ["uv", "self", "update"],
+        check=False,
+        capture_output=True,
+    )
