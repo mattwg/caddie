@@ -157,32 +157,33 @@ Idempotent refresh of the environment, not the data, executed by the same instal
 
 ### `/caddie-ask "<question>"`
 
-The enforced entry point for analysis. Must always produce or extend a notebook — never answer a data question with just an inline chat result.
+The enforced entry point for analysis. Must always produce or extend a notebook — never answer a data question with just an inline chat result, and never stop at a single query's shape (row/column count) in place of a real answer.
 
 - `/caddie-ask` is required to start a project (the first question in a new analysis). It is not required again for every message after that.
-- A follow-up data question later in the same conversation is treated as an implicit continuation of the active project — append to that notebook — without the user needing to retype `/caddie-ask`. This is a deliberate anti-bypass rule: if follow-ups after the first `/caddie-ask` were answered as plain chat, the "never answer inline" guarantee would only hold for the first question in a session and would quietly erode after that.
+- A follow-up data question later in the same conversation is treated as an implicit continuation of the active project — a new episode in that project (see Episodes below) — without the user needing to retype `/caddie-ask`. This is a deliberate anti-bypass rule: if follow-ups after the first `/caddie-ask` were answered as plain chat, the "never answer inline" guarantee would only hold for the first question in a session and would quietly erode after that.
 - Judging "is this message a continuation of the active analysis" is a judgment call, not a deterministic trigger like the slash command itself — a plain clarifying question about the existing notebook, a follow-up that changes the underlying question, and a clearly unrelated new topic should all be told apart. When it's ambiguous whether a message continues the active project or starts a new one, ask rather than guess.
 - Look up the user's config from `~/.caddie/caddie.yaml`; if missing, instruct the user to run `/caddie-install` first.
-- Load the active connector per the resolved manifest.
-- Determine the target project:
-  - New question with no active project in this conversation → create a new project folder with a slug derived from the question.
-  - Continuation of an existing project (explicit `/caddie-ask` reference, or an implicit follow-up per above) → append cells to that notebook instead of creating a new one.
+- Determine the target project: a new question with no active project in this conversation creates a new project folder with a slug derived from the question; a continuation of an existing project adds a new episode to it instead.
 - If a `context` plugin is configured (deferred — see Context/RAG plugin interface above; no-op when absent), search it for similar prior analyses before generating, and surface anything relevant to the user or the skill.
-- Invoke the appropriate configured analytics skill for the question (via the Skill tool, from the `skills` list in `caddie.yaml` — see Analytics skill interface above for how selection among multiple works), passing it the question and the active connector's session, and let it produce the markdown question cell and the code cell.
-- Build the notebook as real cells: the markdown cell, the code cell, and an output cell.
-- Execute the notebook against the connector's live session (not just generate it) so the output cell reflects real results.
-- If a `context` plugin is configured, index the completed notebook (question, summary, path) into it once execution succeeds (deferred — no-op when absent).
-- Report back in chat: the notebook file path and a short summary of the result — not the full raw output.
+
+**Episodes.** One `/caddie-ask` question is an episode, not a single query — the point is to actually answer the question, which usually takes more than one step:
+
+1. **Clarify.** Before planning, resolve anything genuinely ambiguous about the question — time range, a segment/filter it implies, granularity for a time series, and, where it isn't obvious, what decision the answer needs to support. Ask the user rather than guess; skip asking when the question is already fully specified.
+2. **Plan.** Invoke the configured analytics skill (via the Skill tool, from the `skills` list in `caddie.yaml`) for org-specific grounding — table/column names, metric definitions, an example query — as input to a stated plan: the decision being supported, the scope, and the anticipated approach. The plan is written into the notebook as its own cell *before any query runs*, and can be revised in place later if execution reveals it was wrong.
+3. **Execute.** Run one step at a time (a query, or occasionally a chart when a chart is genuinely the clearest way to convey a result — never as a default). After each step, decide whether to continue, revise the plan, add a chart, or conclude, bounded by a small iteration cap to prevent an unbounded loop. Each step is executed for real against the connector's live session, and a bounded, adaptive preview of the actual result (not just shape) is what the loop reasons from — the notebook's own cell always holds the full, uncapped result regardless of preview size. Pushing aggregation/filtering into the query is how this scales to real data volumes; a wider preview is an occasional exception, not the default way to "see more data." If answering genuinely requires judging many individual rows rather than a query-computed aggregate, that must be stated plainly in the answer (sample size, an honest caveat), not implied away.
+4. **Answer.** Conclude with a real natural-language answer — a number, a short table, whatever the question needs — written into the notebook as its own cell, then render the whole notebook to a static, fully-executed file the user can open with one click, no further action needed.
+- If a `context` plugin is configured, index the completed episode (question, summary, path) into it once it concludes (deferred — no-op when absent).
+- Report back in chat: the answer text, the click-to-open rendered link, and (if it happened) a note that the plan was revised — never the full raw output.
 
 ### `/caddie-load <project>`
 
 Bring an existing notebook back into context — the general-purpose way to resume work on a project, including in a brand-new conversation/session that never ran `/caddie-ask` for it.
 
 - Locate the named project under the user's notebooks folder.
-- Load the notebook's existing cells (questions asked, code, prior output) into the conversation's context, so the user can immediately ask follow-up questions against it the same way they could mid-session with `/caddie-ask` (same implicit-continuation behavior, same anti-bypass rule: once loaded, treat this as the active project for follow-ups).
-- By default, re-execute all cells in order against live data, via the connector recorded for that notebook (a notebook always re-runs against the same connector it was created with) — loading a notebook implies wanting current data, not a stale snapshot.
-- Report what changed in the output (e.g. row counts, key metric deltas) compared to the previous run, where feasible.
-- Fail clearly (not silently) if the notebook no longer runs (e.g. schema changes, auth expired, connector unreachable) — loading context still succeeds in this case (the user can see and discuss the existing notebook), only the re-run step fails.
+- Load the notebook's existing episodes (question, plan, steps, answer) into the conversation's context, so the user can immediately ask follow-up questions against it the same way they could mid-session with `/caddie-ask` (same implicit-continuation behavior, same anti-bypass rule: once loaded, treat this as the active project for follow-ups — a plain follow-up becomes a new episode).
+- By default, re-execute every step in every episode, in order, against live data, via the connector recorded for that project (a notebook always re-runs against the same connector it was created with) — loading a notebook implies wanting current data, not a stale snapshot. Plan and answer cells are reported, not re-executed.
+- Report what changed in the output (e.g. row counts, key metric deltas) compared to the previous run, where feasible, and re-render the click-to-open file so its link reflects the latest data.
+- Fail clearly (not silently) if a step no longer runs (e.g. schema changes, auth expired, connector unreachable) — loading context still succeeds in this case (the user can see and discuss the existing notebook), only that step's re-run (and the render, if it depends on that step) fails.
 
 ### `/caddie-list [pattern]`
 
