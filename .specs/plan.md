@@ -218,6 +218,21 @@ No new features — a full walkthrough on a clean machine (or clean state) using
 
 ---
 
+## Step 16 — `/caddie-ask` episodes: clarify, plan, execute, adapt, answer
+
+Steps 12–14 made `/caddie-ask` execute exactly one query and report its shape (row/column count). Real use against a live question ("what were NPLs last week") showed that isn't an answer — replaces the one-shot flow with an "episode" model: clarify ambiguous scope with the user, write an analysis plan into the notebook before pulling data, execute one step at a time against a real (adaptive, non-truncating-for-small-results) data preview, revise the plan in place if a step reveals it was wrong, add a chart only when one genuinely clarifies the result, conclude with a real natural-language answer, and render the whole notebook to a static file the user can open with one click. Breaking change to the cell-naming scheme and `.caddie_project.json`; no real users yet, so no migration.
+
+**Definition of done:**
+- `caddie notebook-start` creates a project/episode from a question with no execution; `caddie notebook-plan` requires an episode to exist and can be called again to overwrite the plan in place (not duplicate it).
+- `caddie notebook-step` refuses to run before a plan exists for its episode; each call appends and executes one query or chart step, returning a real (row-count-aware, adaptively-capped) preview or a chart's figure description, never silently swallowing an error.
+- `caddie notebook-answer` refuses before any step has run or after an episode already has an answer; on success it renders the whole notebook to a static HTML file via `marimo export html` and prints a `file://` link.
+- `caddie notebook-rerun` re-executes every episode's steps in order (query and chart), reports per-step deltas against the previous run, reports each episode's current plan/answer without re-executing them, and re-renders the HTML file.
+- `/caddie-ask` and `/caddie-load` SKILL.md instructions reflect the clarify → plan → execute (revisable) → answer loop, including the iteration cap and the rule that a wider preview is a deliberate exception, not the default way to see more data.
+
+**Commit:** "Rebuild /caddie-ask as an iterative clarify/plan/execute/answer loop"
+
+---
+
 ## Deferred — Future phase (not part of this build)
 
 **Context/RAG plugin.** Per requirements.md, this is explicitly deferred and not one of the steps above — recorded here so it isn't lost, and so a future step is scoped before work starts on it:
