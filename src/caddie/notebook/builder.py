@@ -35,7 +35,7 @@ _SETUP_CODE = (
     "\n"
     "config = load_config()\n"
     "connector = load_connector_from_config(config)\n"
-    "conn = connector.get_session()"
+    "conn = connector"
 )
 
 
