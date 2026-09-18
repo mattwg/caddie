@@ -11,6 +11,7 @@ dependencies = [
     "marimo>=0.9",
     "plotly>=5.24",
     "ruamel-yaml>=0.18",
+    "databricks-connect>=15.4",
 ]
 
 [project.scripts]
@@ -18,6 +19,7 @@ caddie = "caddie:main"
 
 [project.entry-points."caddie.connectors"]
 fake = "caddie.connectors.fake:FakeConnector"
+databricks = "caddie.connectors.databricks:DatabricksConnector"
 
 [build-system]
 requires = ["uv_build>=0.11.5,<0.12.0"]
