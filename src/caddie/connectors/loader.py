@@ -8,8 +8,12 @@ loader has no knowledge of any specific backend.
 """
 
 from importlib.metadata import EntryPoint, entry_points
+from typing import TYPE_CHECKING
 
 from caddie.connectors.base import Connector
+
+if TYPE_CHECKING:
+    from caddie.config.model import CaddieConfig
 
 _ENTRY_POINT_GROUP = "caddie.connectors"
 
@@ -41,3 +45,12 @@ def load_connector(name: str, **kwargs: object) -> Connector:
 
     connector_cls = available[name].load()
     return connector_cls(**kwargs)
+
+
+def load_connector_from_config(config: "CaddieConfig") -> Connector:
+    """Instantiate the config's connector with its saved settings.
+
+    A thin wrapper so install/update don't each need to know that
+    connector settings live on `config.connector_settings`.
+    """
+    return load_connector(config.connector, **config.connector_settings)

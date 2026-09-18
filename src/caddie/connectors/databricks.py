@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 DATABRICKS_CFG_PATH = Path.home() / ".databrickscfg"
+DEFAULT_PROFILE = "caddie"
 
 
 class DatabricksAuthError(Exception):
@@ -28,7 +29,7 @@ def _profile_exists(profile: str, cfg_path: Path = DATABRICKS_CFG_PATH) -> bool:
 
 
 class DatabricksConnector:
-    def __init__(self, profile: str, host: str | None = None) -> None:
+    def __init__(self, host: str | None = None, profile: str = DEFAULT_PROFILE) -> None:
         self.profile = profile
         self.host = host
         self._authenticated = False
