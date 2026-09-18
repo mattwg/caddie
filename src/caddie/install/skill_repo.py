@@ -30,3 +30,25 @@ def resolve_skill_repo(skill_repo: str, clone_root: Path) -> Path:
 def _slug(skill_repo: str) -> str:
     name = skill_repo.rstrip("/").rsplit("/", 1)[-1]
     return name[: -len(".git")] if name.endswith(".git") else name
+
+
+def pull_skill_repo(path: Path) -> None:
+    """`git pull` the resolved skill_repo clone, if it's actually a git repo.
+
+    A skill_repo pointed at a plain local directory (e.g. test
+    fixtures, or a path the user manages themselves) isn't something
+    `caddie update` should try to pull. Checking the repo *toplevel*
+    (not just "is inside a work tree") also correctly skips a fixture
+    directory that merely happens to live inside caddie core's own
+    git repo.
+    """
+    toplevel = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if toplevel.returncode != 0:
+        return
+    if Path(toplevel.stdout.strip()).resolve() != path.resolve():
+        return
+    subprocess.run(["git", "-C", str(path), "pull", "--ff-only"], check=True)
