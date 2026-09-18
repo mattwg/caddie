@@ -29,6 +29,7 @@ _REQUIRED_KEYS = ("skills", "skill_repo", "connector")
 
 _yaml = YAML()
 _yaml.preserve_quotes = True
+_yaml.width = 4096  # don't line-wrap long scalars like skill_repo_path
 
 
 def _new_yaml_map() -> Any:

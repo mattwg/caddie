@@ -1,0 +1,4 @@
+skills:
+  - test-skill-a
+connector: databricks
+host: https://fake-host.cloud.databricks.com
