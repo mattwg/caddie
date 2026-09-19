@@ -151,17 +151,22 @@ def _next_step_index(names: list[str], episode: int) -> int:
     return max(indices, default=0) + 1
 
 
-def start_episode(project_dir: Path, question_markdown: str) -> tuple[Path, int]:
+def start_episode(project_dir: Path, question_markdown: str, connector: str) -> tuple[Path, int]:
     """Create the project's notebook if needed and start a new episode:
     writes only its `question_{E}` cell. No plan, no steps yet - those
-    come from `upsert_plan`/`append_step`. Returns (path, episode)."""
+    come from `upsert_plan`/`append_step`. Returns (path, episode).
+
+    `connector` only matters for a brand-new notebook, to scope its
+    dependency header to what that connector actually needs (see
+    `notebook/dependencies.py`); an existing notebook keeps whatever
+    header it already has."""
     project_dir.mkdir(parents=True, exist_ok=True)
     path = notebook_path(project_dir)
 
     codes, names, configs = _existing_cells(path)
     if not names:
         codes, names, configs = [_SETUP_CODE], [SETUP_CELL_NAME], [CellConfig()]
-        header = render_script_header()
+        header = render_script_header(connector)
     else:
         header = get_header_comments(path)
 

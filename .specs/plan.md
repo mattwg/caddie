@@ -264,6 +264,22 @@ Step 17 isolated a notebook's *extra* dependencies from caddie's own venv, but t
 
 ---
 
+## Step 19 — Scope notebook dependency headers to the actual connector
+
+Testing step 18 surfaced a real inefficiency: both the working notebook's and the portable notebook's dependency headers mirrored caddie's *entire* dependency list, so a `fake`-connector project's header (and its resolved sandbox) declared `databricks-connect` — a heavy package it will never import. Scopes both headers to what the project's actual connector needs.
+
+**Definition of done:**
+- `notebook/dependencies.py` computes a connector-agnostic base (marimo, plotly, and — for the working notebook only — ruamel-yaml) plus a small, explicit mapping of which dependencies belong only to a specific built-in connector (today: `databricks` → `databricks-connect`).
+- `render_script_header(connector)` and `render_portable_script_header(connector)` take the project's connector name and only include that connector's own extra dependencies; verified for both `fake` (no `databricks-connect` in either header) and `databricks` (present in both).
+- `caddie notebook-start` threads `config.connector` through to the header written for a brand-new notebook; an existing notebook's header is untouched (preserved as before).
+- `caddie notebook-share` threads the project's saved connector (from `.caddie_project.json`) through to the portable header.
+- caddie's own `pyproject.toml`, `uv sync`/`uv run` behavior, and install/update flow are unchanged — this is scoped entirely to header computation, not caddie's own packaging (see requirements.md for why splitting caddie's own dependencies into optional-dependency groups was considered and rejected).
+- Verified end-to-end via the real CLI: a full `notebook-start` → `notebook-plan` → `notebook-step` → `notebook-answer` → `notebook-share` run against the `fake` connector produces a notebook and portable file with no `databricks-connect` in either header.
+
+**Commit:** "Scope notebook dependency headers to the project's actual connector"
+
+---
+
 ## Deferred — Future phase (not part of this build)
 
 **Context/RAG plugin.** Per requirements.md, this is explicitly deferred and not one of the steps above — recorded here so it isn't lost, and so a future step is scoped before work starts on it:

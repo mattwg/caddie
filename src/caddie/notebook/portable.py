@@ -99,7 +99,10 @@ def render_portable_notebook(project_dir: Path) -> Path:
     out_path = portable_path(project_dir)
     out_path.write_text(
         generate_filecontents(
-            codes, names, configs, header_comments=render_portable_script_header()
+            codes,
+            names,
+            configs,
+            header_comments=render_portable_script_header(state.connector),
         )
     )
     return out_path

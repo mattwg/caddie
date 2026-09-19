@@ -132,6 +132,12 @@ Even with the isolation above, the working notebook still depends on the `caddie
 
 This is a snapshot, not a live link — it has to be regenerated (`/caddie-share` again) after the connector/template code or the project's connector settings change, and it removes the dependency on `caddie` only, not on the data backend: whoever opens it still needs their own working access to the same source (e.g. their own Databricks CLI profile). The working notebook (`notebook.py`) is untouched by this — a project keeps developing against the live, caddie-backed version, and `/caddie-share` is a deliberate, on-demand step, not the default.
 
+### Dependency headers are scoped to the project's connector
+
+Both the working notebook's header and the portable notebook's header only declare what the project's actual connector needs, not caddie's full dependency list — a project using the `fake` connector never declares (or pays the install cost of) `databricks-connect`, even though it's one of caddie's own runtime dependencies for the `databricks` connector. `notebook/dependencies.py` maps each built-in connector's connector-only dependencies explicitly (today: `databricks` → `databricks-connect`), since both built-in connectors are registered inside caddie's own distribution and so have no separate package metadata to read the way a genuinely separate third-party connector plugin would.
+
+This is deliberately *not* solved by splitting caddie's own `pyproject.toml` into per-connector `[project.optional-dependencies]` groups instead: every `caddie` invocation goes through `uv run` (see every SKILL.md), which re-syncs caddie's venv to match its *base* dependency list before running — it does not preserve extras installed by a one-off `uv sync --extra databricks` call, so a real Databricks user's very next plain `caddie` command would silently lose the package again. Fixing that would mean threading a per-connector `--extra` flag through every skill's invocation of `caddie`, a bigger and riskier change than this dependency-scoping problem calls for.
+
 ## Background
 
 Today, ad hoc data-querying skills run a query and return a result inline in chat. Nothing persists: a follow-up question starts from scratch, and there is no artifact a user can open, re-run, or hand to a teammate. This spec introduces five commands that together create, maintain, and surface that artifact — implemented once in Caddie core, reused by any org that plugs in a skill and a connector.

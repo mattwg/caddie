@@ -22,12 +22,41 @@ cleanly. The tradeoff is that a sandbox picks up caddie's source as of
 whenever it was last resolved, not live - re-run `caddie
 notebook-add-dependency` (or `uv add --script`/`uv lock --script`
 directly) after changing caddie's own code to force a rebuild.
+
+The header only includes the dependencies the project's actual
+connector needs, not caddie's full dependency list - see
+`_BUILTIN_CONNECTOR_ONLY_DEPS` below for why that isn't simply "read
+caddie's pyproject.toml as-is."
 """
 
 import tomllib
 from pathlib import Path
 
 from marimo._utils.scripts import write_pyproject_to_script
+
+# Dependencies in caddie's own pyproject.toml that exist only to
+# support one specific built-in connector, keyed by connector name -
+# so a notebook using a different connector doesn't declare (and pay
+# the install cost of) a package it will never import. `databricks`
+# and `fake` are both registered inside caddie's own distribution (see
+# pyproject.toml's `caddie.connectors` entry points), so there's no
+# separate installed package to ask for accurate per-connector
+# metadata the way a genuinely separate third-party connector plugin
+# would have - this mapping is the pragmatic stand-in for that.
+#
+# Deliberately not fixed by splitting caddie's own pyproject.toml into
+# per-connector `[project.optional-dependencies]` groups instead: every
+# `caddie` invocation goes through `uv run` (see every SKILL.md), which
+# re-syncs the venv to match the *base* dependency list before running
+# - it does not preserve extras installed by a one-off `uv sync
+# --extra databricks` call, so a real Databricks user's very next
+# plain `caddie` command would silently lose the package again. Fixing
+# that properly would mean threading a per-connector `--extra` flag
+# through every skill's invocation, which is a bigger and riskier
+# change than this dependency-scoping problem calls for.
+_BUILTIN_CONNECTOR_ONLY_DEPS: dict[str, list[str]] = {
+    "databricks": ["databricks-connect"],
+}
 
 
 def caddie_root() -> Path:
@@ -45,31 +74,76 @@ def _caddie_project_metadata() -> dict:
     return tomllib.loads(pyproject_path.read_text())["project"]
 
 
-def base_dependencies() -> list[str]:
-    """caddie's own runtime dependencies, plus caddie itself (as a
-    `file://` URL pointing at this checkout) - the minimum a sandboxed
-    notebook needs to run its `setup` cell."""
+def _dependency_name(requirement: str) -> str:
+    for sep in ("@", ">=", "==", "<=", "~=", ">", "<", "[", ";"):
+        requirement = requirement.split(sep, 1)[0]
+    return requirement.strip()
+
+
+def _connector_agnostic_dependencies() -> list[str]:
+    """caddie's own dependencies, minus every entry that
+    `_BUILTIN_CONNECTOR_ONLY_DEPS` attributes to a specific connector -
+    the part every notebook needs regardless of which connector it
+    uses."""
+    connector_only = {
+        name for names in _BUILTIN_CONNECTOR_ONLY_DEPS.values() for name in names
+    }
+    return [
+        dep
+        for dep in _caddie_project_metadata()["dependencies"]
+        if _dependency_name(dep) not in connector_only
+    ]
+
+
+def _connector_dependencies(connector_name: str) -> list[str]:
+    """The subset of caddie's own dependencies that `connector_name`
+    actually needs, beyond the connector-agnostic base. A connector not
+    listed in `_BUILTIN_CONNECTOR_ONLY_DEPS` (a genuinely separate,
+    installed-elsewhere connector plugin) gets nothing extra here - its
+    own package's install metadata already covers its needs
+    independently of caddie."""
+    wanted = set(_BUILTIN_CONNECTOR_ONLY_DEPS.get(connector_name, []))
+    if not wanted:
+        return []
+    return [
+        dep for dep in _caddie_project_metadata()["dependencies"] if _dependency_name(dep) in wanted
+    ]
+
+
+def base_dependencies(connector_name: str) -> list[str]:
+    """caddie itself (as a `file://` URL pointing at this checkout),
+    plus its connector-agnostic dependencies, plus whatever
+    `connector_name` specifically needs - the minimum a sandboxed
+    notebook using that connector needs to run its `setup` cell."""
     caddie_dep = f"caddie @ {caddie_root().as_uri()}"
-    return [caddie_dep, *_caddie_project_metadata()["dependencies"]]
+    return [
+        caddie_dep,
+        *_connector_agnostic_dependencies(),
+        *_connector_dependencies(connector_name),
+    ]
 
 
-def render_script_header() -> str:
-    """A PEP 723 `# /// script` block declaring `base_dependencies()`."""
+def render_script_header(connector_name: str) -> str:
+    """A PEP 723 `# /// script` block declaring `base_dependencies()`
+    for the project's actual connector."""
     metadata = _caddie_project_metadata()
     project = {
         "requires-python": metadata["requires-python"],
-        "dependencies": base_dependencies(),
+        "dependencies": base_dependencies(connector_name),
     }
     return write_pyproject_to_script(project)
 
 
-def render_portable_script_header() -> str:
+def render_portable_script_header(connector_name: str) -> str:
     """The dependency header for a portable notebook (see
-    `notebook/portable.py`): caddie's own runtime dependencies, minus
-    caddie itself (the whole point of a portable notebook) and minus
-    `ruamel-yaml` (only needed to read `caddie.yaml`, which a portable
-    notebook's inlined setup cell never does)."""
+    `notebook/portable.py`): the connector-agnostic dependencies (minus
+    `ruamel-yaml`, only needed to read `caddie.yaml`, which a portable
+    notebook's inlined setup cell never does) plus what the project's
+    actual connector needs - never caddie itself, the whole point of a
+    portable notebook."""
+    deps = [
+        dep for dep in _connector_agnostic_dependencies() if not dep.startswith("ruamel-yaml")
+    ] + _connector_dependencies(connector_name)
     metadata = _caddie_project_metadata()
-    deps = [dep for dep in metadata["dependencies"] if not dep.startswith("ruamel-yaml")]
     project = {"requires-python": metadata["requires-python"], "dependencies": deps}
     return write_pyproject_to_script(project)
