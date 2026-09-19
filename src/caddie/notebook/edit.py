@@ -9,6 +9,14 @@ project reuses an already-running server rather than starting a
 duplicate on another port. Started servers use `--no-token`, since
 they're bound to localhost for one person's own analysis - there's no
 second party to authenticate against.
+
+Started with `--sandbox`, so marimo runs the notebook in a `uv`-managed
+environment built from its own PEP 723 header (see
+`notebook/dependencies.py`) instead of caddie's own shared venv. That
+keeps a package a notebook needs (added via `caddie
+notebook-add-dependency`) from ever having to go into caddie's own
+`pyproject.toml`, and vice versa - caddie's own dependency set can
+change without touching any existing notebook.
 """
 
 import argparse
@@ -26,7 +34,11 @@ from caddie.notebook.builder import notebook_path
 
 _URL_RE = re.compile(r"URL:\s*(\S+)")
 _LISTEN_PORT_RE = re.compile(r":(\d+)\s*\(LISTEN\)")
-_START_TIMEOUT_SECONDS = 15
+# Generous: --sandbox means a cold start has to resolve and install the
+# notebook's own uv environment (caddie itself, plus its dependencies)
+# before marimo can report its URL. Once that environment is cached,
+# startup is back to ordinary marimo speed.
+_START_TIMEOUT_SECONDS = 120
 
 
 class EditServerError(Exception):
@@ -134,7 +146,16 @@ def start_server(nb_path: Path) -> str:
     log_fh = open(log_path, "w")
     try:
         subprocess.Popen(
-            [sys.executable, "-m", "marimo", "edit", str(nb_path), "--headless", "--no-token"],
+            [
+                sys.executable,
+                "-m",
+                "marimo",
+                "edit",
+                str(nb_path),
+                "--headless",
+                "--no-token",
+                "--sandbox",
+            ],
             stdout=log_fh,
             stderr=subprocess.STDOUT,
             start_new_session=True,

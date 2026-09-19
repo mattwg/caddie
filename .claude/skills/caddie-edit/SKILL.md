@@ -13,6 +13,15 @@ editor instead: checking for and running the server itself lives in
 for that exact notebook or starts a new one; this skill's job is to
 invoke it and open the URL it prints.
 
+The server is started with `--sandbox`: marimo runs the notebook in a
+`uv`-managed environment built from that notebook's own dependency
+header, isolated from caddie's own shared venv. First launch for a
+given notebook can take noticeably longer (up to ~2 minutes) while `uv`
+resolves and installs that environment; later launches reuse `uv`'s
+cache and are fast. If the notebook needs a package beyond caddie's own
+baseline, that's `/caddie-add-dependency`, not editing caddie's own
+`pyproject.toml`.
+
 ## Invoking the CLI
 
 The command below assumes `caddie` is on `PATH`. If the working

@@ -233,6 +233,37 @@ Steps 12–14 made `/caddie-ask` execute exactly one query and report its shape 
 
 ---
 
+## Step 17 — Per-notebook sandboxed dependencies
+
+Real use surfaced a dependency-management gap step 16 didn't cover: a notebook's own analysis code (a chart step needing `scikit-learn`, say) may need a package caddie core doesn't have, and installing it into caddie's own shared venv risks a conflict with caddie's own dependencies, or with what a different notebook needs. Gives every notebook its own PEP 723 dependency header and an isolated `uv`-managed environment for `/caddie-edit`, instead of one shared venv for everything.
+
+**Definition of done:**
+- `caddie notebook-start` writes a new notebook with a `# /// script` header declaring caddie (as a `file://` dependency on the running checkout) plus caddie's own runtime dependencies; `notebook-plan`/`notebook-step`/`notebook-answer` preserve that header unchanged on every subsequent write.
+- `caddie notebook-edit` launches `marimo edit --sandbox`; opening a project's notebook this way starts successfully against an isolated environment — verified end-to-end: the sandboxed server serves the notebook with no import errors, using the `fake` connector — with no changes to caddie's own `.venv`.
+- `caddie notebook-add-dependency --project <p> <package>` adds a package to one project's notebook header only (via `uv add --script`), verified to survive a subsequent builder write (e.g. `notebook-step`) and to be picked up the next time that notebook opens under `--sandbox`.
+- caddie's own `pyproject.toml` and shared `.venv` are unchanged by adding a notebook dependency.
+- `/caddie-edit`'s SKILL.md documents the sandbox and its first-launch cost; a new `/caddie-add-dependency` skill documents the new command; the README calls out per-notebook dependency isolation as part of what makes a Caddie notebook a genuinely reusable, reproducible artifact.
+
+**Commit:** "Give each notebook its own sandboxed uv environment for dependencies"
+
+---
+
+## Step 18 — Portable notebooks (`/caddie-share`)
+
+Step 17 isolated a notebook's *extra* dependencies from caddie's own venv, but the notebook still depends on `caddie` itself for its `setup` cell (config loading, connector resolution, chart template) — so it still only runs on a machine that can resolve caddie. Adds an on-demand way to produce a truly standalone copy for handing to someone without caddie: vendor the connector's and chart template's own source (both are caddie-import-free by design) into a rewritten, hidden `setup` cell, instantiated from the project's saved connector settings instead of `caddie.yaml`.
+
+**Definition of done:**
+- `caddie notebook-share --project <p>` writes `notebook.portable.py` alongside `notebook.py`, leaving `notebook.py` itself untouched.
+- The portable file's `setup` cell is marked `hide_code` and contains no `caddie` import anywhere — verified by parsing its AST for any `caddie`/`caddie.*` import.
+- The portable file's PEP 723 header omits `caddie` and `ruamel-yaml`; `uv export --script` on it resolves cleanly with no local path/editable entries.
+- `uv run marimo export html --sandbox` on the portable file, in a machine state with no caddie checkout involved (a fresh `--isolated` uv environment), executes every cell without error and produces the same result as the working notebook.
+- Regenerating (`/caddie-share` again) after connector settings change reflects the new settings; the working notebook is unaffected either way.
+- A new `/caddie-share` skill documents the command and states plainly what "portable" does and doesn't cover (removes the `caddie` dependency; does not remove the data-backend/credential dependency; is a snapshot, not a live link).
+
+**Commit:** "Add /caddie-share: standalone notebooks with no caddie dependency"
+
+---
+
 ## Deferred — Future phase (not part of this build)
 
 **Context/RAG plugin.** Per requirements.md, this is explicitly deferred and not one of the steps above — recorded here so it isn't lost, and so a future step is scoped before work starts on it:

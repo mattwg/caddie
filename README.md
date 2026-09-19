@@ -30,6 +30,39 @@ themselves, while still producing something an analyst and data scientist will f
   user can open it in a live editor (`/caddie-edit`), change a query by
   hand, and rerun it, without touching Caddie itself.
 
+## Why the notebook stays reproducible
+
+A question answered by an AI assistant in chat is easy to produce and
+hard to trust later: the query it ran, the exact data it saw, and
+whether it would give the same answer today all live in a transcript,
+not in anything re-runnable. Caddie's answer is a real, ordinary Marimo
+`.py` file - the actual query, plan, and result live in the file
+itself, plain Python, diffable in git, openable by anyone with the
+notebook and access to the same data source.
+
+That only holds up if the notebook keeps running later, after Caddie's
+own code has moved on. So every generated notebook carries its own
+dependency declaration (a PEP 723 header) and runs in its own isolated
+`uv`-managed environment (`/caddie-edit`, under the hood `marimo edit
+--sandbox`) - not Caddie's shared virtual environment. A package one
+analysis needs (`/caddie-add-dependency`) never has to be reconciled
+against Caddie's own dependencies or another notebook's, and Caddie's
+own dependencies can change later without breaking a notebook already
+in use.
+
+The working notebook still depends on Caddie itself, though - the
+same way a script written against a company's internal analytics
+library isn't standalone without that library either. For handing a
+notebook to someone who doesn't have Caddie installed at all,
+`/caddie-share` produces a second file, `notebook.portable.py`, with
+that dependency removed: the connector actually used and the shared
+chart template are vendored into the notebook's own source (both are
+plain, self-contained Python with no Caddie import), so the file runs
+with nothing but `uv` on any machine. It's a snapshot taken on demand,
+not the default output, and it only removes the Caddie dependency -
+whoever opens it still needs their own access to the same data
+backend.
+
 ## How it's meant to be used
 
 Caddie core is generic on purpose: it has no company-specific table
@@ -65,7 +98,8 @@ All three sub systmes are configuration, not code changes to Caddie core.
   or skill produced it.
 - [uv](https://docs.astral.sh/uv/) for Python and dependency
   management, bootstrapped automatically so end users never install it
-  by hand.
+  by hand, and to give each notebook its own isolated environment (see
+  "Why the notebook stays reproducible" above).
 
 ## Commands
 
@@ -82,6 +116,12 @@ command) backed by a real `caddie` CLI subcommand:
   context, re-running its steps against live data.
 - `/caddie-edit <project>`: open a project's notebook in a live
   Marimo editor, for hand-editing rather than reading a static export.
+- `/caddie-add-dependency <project> <package>`: add a Python package
+  to one project's notebook, isolated to that notebook's own sandboxed
+  environment rather than caddie's own shared venv.
+- `/caddie-share <project>`: generate a standalone copy of a project's
+  notebook with no dependency on caddie itself, for handing to someone
+  who doesn't have caddie installed.
 - `/caddie-update`: refresh an existing setup (tooling, skill repo,
   dependencies, connector auth).
 
