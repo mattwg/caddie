@@ -33,17 +33,25 @@ def _available_entry_points() -> dict[str, EntryPoint]:
     return {ep.name: ep for ep in entry_points(group=_ENTRY_POINT_GROUP)}
 
 
+def resolve_connector_class(name: str) -> type:
+    """Return the class registered under `name`, without instantiating
+    it. Used to vendor a connector's own module source into a portable
+    notebook (see `notebook/portable.py`) - it needs the class to find
+    its source file, not a live, authenticated instance.
+    """
+    available = _available_entry_points()
+    if name not in available:
+        raise ConnectorNotFoundError(name, list(available.keys()))
+    return available[name].load()
+
+
 def load_connector(name: str, **kwargs: object) -> Connector:
     """Instantiate the named connector plugin.
 
     Raises ConnectorNotFoundError if no connector is registered under
     that name, rather than letting a raw ImportError/KeyError surface.
     """
-    available = _available_entry_points()
-    if name not in available:
-        raise ConnectorNotFoundError(name, list(available.keys()))
-
-    connector_cls = available[name].load()
+    connector_cls = resolve_connector_class(name)
     return connector_cls(**kwargs)
 
 

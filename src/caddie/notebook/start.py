@@ -47,7 +47,7 @@ def run(args: argparse.Namespace) -> int:
     is_new_project = not project_dir.is_dir()
 
     question_markdown = f"**Question:** {args.question}"
-    path, episode = start_episode(project_dir, question_markdown)
+    path, episode = start_episode(project_dir, question_markdown, config.connector)
 
     if is_new_project or load_state(project_dir) is None:
         save_state(

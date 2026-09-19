@@ -22,12 +22,14 @@ from pathlib import Path
 from typing import Literal
 
 from marimo._ast.cell import CellConfig
-from marimo._ast.codegen import generate_filecontents
+from marimo._ast.codegen import generate_filecontents, get_header_comments
 from marimo._ast.load import get_notebook_status
+
+from caddie.notebook.dependencies import render_script_header
 
 NOTEBOOK_FILENAME = "notebook.py"
 
-_SETUP_CELL_NAME = "setup"
+SETUP_CELL_NAME = "setup"
 _SETUP_CODE = (
     "import marimo as mo\n"
     "from caddie.charting import template as _caddie_template\n"
@@ -120,8 +122,22 @@ def _existing_cells(path: Path) -> tuple[list[str], list[str], list[CellConfig]]
     return codes, names, configs
 
 
-def _write(path: Path, codes: list[str], names: list[str], configs: list[CellConfig]) -> None:
-    path.write_text(generate_filecontents(codes, names, configs))
+def read_cells(path: Path) -> tuple[list[str], list[str], list[CellConfig]]:
+    """Public entry point to `_existing_cells`, for callers outside this
+    module that need a notebook's raw cell structure - e.g.
+    `notebook/portable.py`, which rewrites the `setup` cell without
+    reimplementing notebook parsing."""
+    return _existing_cells(path)
+
+
+def _write(
+    path: Path,
+    codes: list[str],
+    names: list[str],
+    configs: list[CellConfig],
+    header: str | None = None,
+) -> None:
+    path.write_text(generate_filecontents(codes, names, configs, header_comments=header))
 
 
 def _next_episode_index(names: list[str]) -> int:
@@ -135,23 +151,31 @@ def _next_step_index(names: list[str], episode: int) -> int:
     return max(indices, default=0) + 1
 
 
-def start_episode(project_dir: Path, question_markdown: str) -> tuple[Path, int]:
+def start_episode(project_dir: Path, question_markdown: str, connector: str) -> tuple[Path, int]:
     """Create the project's notebook if needed and start a new episode:
     writes only its `question_{E}` cell. No plan, no steps yet - those
-    come from `upsert_plan`/`append_step`. Returns (path, episode)."""
+    come from `upsert_plan`/`append_step`. Returns (path, episode).
+
+    `connector` only matters for a brand-new notebook, to scope its
+    dependency header to what that connector actually needs (see
+    `notebook/dependencies.py`); an existing notebook keeps whatever
+    header it already has."""
     project_dir.mkdir(parents=True, exist_ok=True)
     path = notebook_path(project_dir)
 
     codes, names, configs = _existing_cells(path)
     if not names:
-        codes, names, configs = [_SETUP_CODE], [_SETUP_CELL_NAME], [CellConfig()]
+        codes, names, configs = [_SETUP_CODE], [SETUP_CELL_NAME], [CellConfig()]
+        header = render_script_header(connector)
+    else:
+        header = get_header_comments(path)
 
     episode = _next_episode_index(names)
     codes.append(f"mo.md({question_markdown!r})")
     names.append(f"question_{episode}")
     configs.append(CellConfig())
 
-    _write(path, codes, names, configs)
+    _write(path, codes, names, configs, header)
     return path, episode
 
 
@@ -161,6 +185,7 @@ def upsert_plan(project_dir: Path, episode: int, plan_markdown: str) -> None:
     without losing its position (right after the question cell)."""
     path = notebook_path(project_dir)
     codes, names, configs = _existing_cells(path)
+    header = get_header_comments(path)
 
     if f"question_{episode}" not in names:
         raise EpisodeNotFoundError(episode, path)
@@ -175,7 +200,7 @@ def upsert_plan(project_dir: Path, episode: int, plan_markdown: str) -> None:
         names.insert(insert_at, plan_name)
         configs.insert(insert_at, CellConfig())
 
-    _write(path, codes, names, configs)
+    _write(path, codes, names, configs, header)
 
 
 def append_step(
@@ -195,6 +220,7 @@ def append_step(
     """
     path = notebook_path(project_dir)
     codes, names, configs = _existing_cells(path)
+    header = get_header_comments(path)
 
     if f"question_{episode}" not in names:
         raise EpisodeNotFoundError(episode, path)
@@ -220,7 +246,7 @@ def append_step(
     names += [cell_name, f"output_{var_prefix}"]
     configs += [CellConfig(), CellConfig()]
 
-    _write(path, codes, names, configs)
+    _write(path, codes, names, configs, header)
     return step
 
 
@@ -229,6 +255,7 @@ def append_answer(project_dir: Path, episode: int, answer_markdown: str) -> None
     no steps yet, or already has an answer - one answer per episode."""
     path = notebook_path(project_dir)
     codes, names, configs = _existing_cells(path)
+    header = get_header_comments(path)
 
     if f"question_{episode}" not in names:
         raise EpisodeNotFoundError(episode, path)
@@ -243,7 +270,7 @@ def append_answer(project_dir: Path, episode: int, answer_markdown: str) -> None
     names.append(f"answer_{episode}")
     configs.append(CellConfig())
 
-    _write(path, codes, names, configs)
+    _write(path, codes, names, configs, header)
 
 
 def existing_episodes(project_dir: Path) -> list[NotebookEpisode]:
