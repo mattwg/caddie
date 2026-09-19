@@ -3,11 +3,14 @@
 One `/caddie-ask` question is an "episode": a `question_{E}` markdown
 cell restating the ask, a `plan_{E}` markdown cell stating the
 approach (revisable in place if execution reveals it was wrong), an
-ordered sequence of `code_{E}_{S}`/`chart_{E}_{S}` + `output_{E}_{S}`
-steps sharing one counter, and a final `answer_{E}` markdown cell.
-Episodes accumulate in one project's notebook across a conversation's
-follow-ups, never overwritten - only a plan cell is ever edited after
-the fact, and only in place.
+ordered sequence of `description_{E}_{S}` markdown + `code_{E}_{S}`/
+`chart_{E}_{S}` + `output_{E}_{S}` steps sharing one counter, and a
+final `answer_{E}` markdown cell. The description cell states in plain
+language what the step is about to do (e.g. "Querying for Q1 user
+counts:") so the notebook reads as an explained analysis, not a bare
+sequence of queries and results. Episodes accumulate in one project's
+notebook across a conversation's follow-ups, never overwritten - only
+a plan cell is ever edited after the fact, and only in place.
 
 This is the notebook-lifecycle mechanics that requirements.md calls
 "ordinary Caddie-core code" shared by `/caddie-ask` and `/caddie-load`
@@ -81,6 +84,7 @@ _QUERY_CELL_RE = re.compile(
 _MARKDOWN_CELL_RE = re.compile(r"^mo\.md\((.+)\)$", re.DOTALL)
 _QUESTION_NAME_RE = re.compile(r"^question_(\d+)$")
 _PLAN_NAME_RE = re.compile(r"^plan_(\d+)$")
+_DESCRIPTION_NAME_RE = re.compile(r"^description_(\d+)_(\d+)$")
 _STEP_NAME_RE = re.compile(r"^(code|chart)_(\d+)_(\d+)$")
 _ANSWER_NAME_RE = re.compile(r"^answer_(\d+)$")
 
@@ -91,6 +95,7 @@ class NotebookStep:
     step: int
     kind: Literal["query", "chart"]
     code: str
+    description: str | None = None
 
 
 @dataclass(frozen=True)
@@ -208,7 +213,7 @@ def append_step(
     episode: int,
     code: str,
     kind: Literal["query", "chart"] = "query",
-    label: str | None = None,
+    description: str | None = None,
 ) -> int:
     """Append the next step (query or chart) plus its output cell to an
     already-planned episode. Returns the new step number.
@@ -217,6 +222,12 @@ def append_step(
     before. A chart step's cell is `code` verbatim - Claude-authored
     Python expected to assign a Plotly figure to `chart_{E}_{S}`,
     referencing an earlier step's `result_{E}_{S}`.
+
+    `description` is plain markdown stating what the step is about to
+    do (e.g. "Querying for Q1 user counts:"). When given, it's written
+    as its own `description_{E}_{S}` markdown cell immediately before
+    the code cell, so the notebook explains itself instead of just
+    showing a query and its output.
     """
     path = notebook_path(project_dir)
     codes, names, configs = _existing_cells(path)
@@ -239,8 +250,10 @@ def append_step(
         body = code
         output_body = f"chart_{var_prefix}"
 
-    if label:
-        body = f"# {label}\n{body}"
+    if description:
+        codes.append(f"mo.md({description!r})")
+        names.append(f"description_{var_prefix}")
+        configs.append(CellConfig())
 
     codes += [body, output_body]
     names += [cell_name, f"output_{var_prefix}"]
@@ -284,6 +297,7 @@ def existing_episodes(project_dir: Path) -> list[NotebookEpisode]:
 
     questions: dict[int, str] = {}
     plans: dict[int, str] = {}
+    descriptions: dict[tuple[int, int], str] = {}
     steps: dict[int, list[NotebookStep]] = {}
     answers: dict[int, str] = {}
 
@@ -292,13 +306,22 @@ def existing_episodes(project_dir: Path) -> list[NotebookEpisode]:
             questions[int(m.group(1))] = _extract_markdown(cell_code)
         elif m := _PLAN_NAME_RE.match(name):
             plans[int(m.group(1))] = _extract_markdown(cell_code)
+        elif m := _DESCRIPTION_NAME_RE.match(name):
+            episode, step = int(m.group(1)), int(m.group(2))
+            descriptions[(episode, step)] = _extract_markdown(cell_code)
         elif m := _STEP_NAME_RE.match(name):
             raw_kind, episode_str, step_str = m.groups()
             episode, step = int(episode_str), int(step_str)
             kind: Literal["query", "chart"] = "query" if raw_kind == "code" else "chart"
             step_code = _extract_query_code(cell_code) if kind == "query" else cell_code
             steps.setdefault(episode, []).append(
-                NotebookStep(episode=episode, step=step, kind=kind, code=step_code)
+                NotebookStep(
+                    episode=episode,
+                    step=step,
+                    kind=kind,
+                    code=step_code,
+                    description=descriptions.get((episode, step)),
+                )
             )
         elif m := _ANSWER_NAME_RE.match(name):
             answers[int(m.group(1))] = _extract_markdown(cell_code)

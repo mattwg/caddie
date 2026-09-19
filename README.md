@@ -1,9 +1,12 @@
 # Caddie
 
 Caddie is a lightweight way to give people who
-don't write code a way to ask questions of company data in plain
+don't write code a system to quickly be able to ask questions of company data in plain
 language - it's also great for data scientists who want to use AI coding tools
 to create notebooks - without messing around with all the setup.
+
+It's a simple framework and set of skills that can be run from Claude Code or other agentic coding tools.  Caddie configures everything for the end user.  They just need call /caddie-install and then they can call /caddie-ask.  Caddie will then answer the question by creating a Marimo notebook which is then served to them without them having to know anything about running Marimo servers.  
+
 
 ## Origin
 
@@ -13,7 +16,7 @@ and is not optimized around asking questions of your data.  If you are not
 careful then the answer lives in a chat transcript
 nobody can re-run. Caddie is an attempt to remove that friction for
 people who aren't going to install Python, `uv`, or a notebook editor
-themselves, while still producing something an analyst and data scientist will find useulf since you can open and work with directly with notebooks afterward.
+themselves, while still producing something an analyst and data scientist will find useulf since you can open, edit and share the notebooks Caddie creates afterward.
 
 ## Who it's for
 
@@ -35,33 +38,19 @@ themselves, while still producing something an analyst and data scientist will f
 A question answered by an AI assistant in chat is easy to produce and
 hard to trust later: the query it ran, the exact data it saw, and
 whether it would give the same answer today all live in a transcript,
-not in anything re-runnable. Caddie's answer is a real, ordinary Marimo
+not in anything re-runnable or shareable. Caddie's answer is a real, ordinary Marimo
 `.py` file - the actual query, plan, and result live in the file
-itself, plain Python, diffable in git, openable by anyone with the
-notebook and access to the same data source.
+itself, plain Python.  Anyone can open it and build on it.
 
-That only holds up if the notebook keeps running later, after Caddie's
-own code has moved on. So every generated notebook carries its own
+Every generated notebook carries its own
 dependency declaration (a PEP 723 header) and runs in its own isolated
-`uv`-managed environment (`/caddie-edit`, under the hood `marimo edit
---sandbox`) - not Caddie's shared virtual environment. A package one
-analysis needs (`/caddie-add-dependency`) never has to be reconciled
-against Caddie's own dependencies or another notebook's, and Caddie's
-own dependencies can change later without breaking a notebook already
-in use.
+`uv`-managed environment.  This means anything Caddie creates can be
+shared with anyone - even people not using Caddie.  
 
-The working notebook still depends on Caddie itself, though - the
-same way a script written against a company's internal analytics
-library isn't standalone without that library either. For handing a
+For handing a
 notebook to someone who doesn't have Caddie installed at all,
-`/caddie-share` produces a second file, `notebook.portable.py`, with
-that dependency removed: the connector actually used and the shared
-chart template are vendored into the notebook's own source (both are
-plain, self-contained Python with no Caddie import), so the file runs
-with nothing but `uv` on any machine. It's a snapshot taken on demand,
-not the default output, and it only removes the Caddie dependency -
-whoever opens it still needs their own access to the same data
-backend.
+`/caddie-share` produces a second file, `notebook.portable.py`, fully standalone.
+The file runs with nothing but `uv` on any machine. 
 
 ## How it's meant to be used
 
@@ -87,7 +76,7 @@ system, so `/caddie-ask` can search prior analyses before generating a
 new one and index completed notebooks for future questions to reuse.
 The interface for this is reserved in the design but not yet built.
 
-All three sub systmes are configuration, not code changes to Caddie core.
+All three sub systmes are pluggable via configuration, and do not require code changes to Caddie core.
 
 ## What it's built on
 

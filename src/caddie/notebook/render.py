@@ -7,6 +7,11 @@ already showing the real tables/charts/answer. This also doubles as an
 independent, whole-file check: `marimo export html` runs every
 episode/cell together via marimo's own reactive kernel, catching a
 cross-cell issue the per-step checks in executor.py wouldn't see.
+
+Exported with `--no-include-code`, so the click-to-open file reads
+like marimo's App view (markdown, tables, charts) rather than Edit
+view (raw code alongside everything else) - a stakeholder shouldn't
+have to read SQL to see the answer.
 """
 
 import subprocess
@@ -33,7 +38,18 @@ def render_notebook(project_dir: Path) -> Path:
     # else the notebook's setup cell imports) available - a bare
     # `marimo` could resolve to an unrelated install/environment.
     result = subprocess.run(
-        [sys.executable, "-m", "marimo", "export", "html", str(nb_path), "-o", str(out_path), "-f"],
+        [
+            sys.executable,
+            "-m",
+            "marimo",
+            "export",
+            "html",
+            str(nb_path),
+            "-o",
+            str(out_path),
+            "-f",
+            "--no-include-code",
+        ],
         capture_output=True,
         text=True,
     )

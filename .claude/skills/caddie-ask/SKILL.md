@@ -71,10 +71,14 @@ discovering it after a failed call.
    this exists.
 
 7. Execute. For each step, author the code yourself (grounded in what
-   the analytics skill told you) and run:
+   the analytics skill told you) and always pass `--description` — a
+   short plain-language line stating what the step is about to do
+   (e.g. "Querying for Q1 user counts:"), written as its own markdown
+   cell right before the query/chart cell. The notebook should read as
+   an explained analysis, not a bare sequence of queries and results.
 
    ```
-   caddie notebook-step --project <slug> --episode <N> [--kind query|chart] [--label "<why>"]
+   caddie notebook-step --project <slug> --episode <N> [--kind query|chart] --description "<what this step does>"
    ```
    with the code on stdin (default `--kind query`). Read back
    `rows`/`columns`/`preview` (or the chart's figure description).
@@ -126,7 +130,8 @@ discovering it after a failed call.
 
 10. Relay to the user:
     - The answer text itself — a genuine conclusion, not row/column
-      counts.
+      counts.  It should directly address the question that was asked 
+      and support the decision being made.
     - A one-line note that the notebook opened in their browser, plus
       the absolute path as plain text as a fallback in case the open
       command failed (e.g. no default browser handler) — not

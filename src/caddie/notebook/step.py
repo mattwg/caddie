@@ -32,8 +32,10 @@ def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
     parser.add_argument("--episode", required=True, type=int, help="Episode number within the project.")
     parser.add_argument("--kind", choices=["query", "chart"], default="query")
     parser.add_argument(
-        "--label",
-        help="Short description prepended as a comment, for readability in marimo edit.",
+        "--description",
+        help="Plain-language markdown explaining what this step is about to do "
+        "(e.g. 'Querying for Q1 user counts:'). Written as its own markdown cell "
+        "right before the step's code cell.",
     )
     parser.add_argument(
         "--preview-rows",
@@ -69,7 +71,9 @@ def run(args: argparse.Namespace) -> int:
     print(f"project: {args.project}")
 
     try:
-        step = append_step(project_dir, args.episode, code, kind=args.kind, label=args.label)
+        step = append_step(
+            project_dir, args.episode, code, kind=args.kind, description=args.description
+        )
     except (EpisodeNotFoundError, PlanRequiredError) as exc:
         print("status: error")
         print(f"error: {exc}")
