@@ -42,15 +42,44 @@ discovering it after a failed call.
    new one was just launched (headless, no browser opened by marimo
    itself — this skill opens it below instead).
 
-3. Open the printed `url` for the user: run `open <url>` (macOS) via a
-   shell command — Claude Code's chat UI can't render a plain URL as
-   clickable the way a real browser link would auto-launch, so this is
-   the only way a click isn't required.
+3. Open the printed `url` for the user. In the Claude Code desktop app
+   (Browser pane available), call `preview_start` with `url: <url>`
+   directly — no `.claude/launch.json` entry is needed or wanted here.
+   `caddie notebook-edit` already owns the server's lifecycle (finding
+   an existing one vs. starting a new one, on its own port); a
+   launch.json config that tries to start its own copy (e.g. a
+   hardcoded `--port`) only adds a second, worse way to do the same
+   thing, and risks colliding with an unrelated process already on
+   that port or going stale and pointing at a notebook that no longer
+   exists. Outside the desktop app, run `open <url>` (macOS) via a
+   shell command instead — plain CLI chat can't render a URL as
+   clickable.
 
 4. Relay to the user:
    - Whether a new server was started or an existing one reused.
-   - The URL as plain text as a fallback in case `open` failed.
+   - The URL as plain text as a fallback in case opening it failed.
    - If the command printed a `note:` line (an existing server that
      wasn't started with `--no-token`), pass that caveat along
      verbatim — the user may need a token from wherever they first
      started it.
+
+## Caveat: don't edit the notebook file while its live server is open
+
+A running marimo edit server keeps its own in-memory copy of the
+notebook and can write that copy back over the file on disk (e.g. on
+autosave, or when a browser tab connects/reconnects) — even if the
+file was changed on disk in the meantime by something else. Concretely:
+if you make further programmatic edits to a project's `notebook.py`
+after its edit server is already running — another `caddie
+notebook-step`/`notebook-answer` call, or a direct file edit — and then
+open or reconnect to that same server, it can silently clobber your
+edits with its stale prior state.
+
+So: treat "server running" and "editing the file outside marimo" as
+mutually exclusive for a given notebook. If you need to make more
+programmatic edits to a notebook that already has a live server open,
+stop that server first (find its PID via the port `notebook-edit`
+printed, e.g. `lsof -nP -iTCP:<port> -sTCP:LISTEN`, and kill it), make
+the edits, then start a fresh server with `caddie notebook-edit` again.
+Don't assume a previously opened browser tab is still showing current
+content once the file has changed underneath it.
