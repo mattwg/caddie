@@ -11,6 +11,17 @@ relays or interprets its output. All actual tool/version checks, repo
 pulling, dependency syncing, and connector re-auth happen inside that
 script, not here.
 
+## Invoking the CLI
+
+The command below assumes `caddie` is on `PATH`. If the working
+directory is a checkout of the Caddie project itself (look for a
+`pyproject.toml` with `name = "caddie"` at or above the working
+directory), the `caddie` entry point only exists inside that project's
+own virtualenv — running it bare will fail with `command not found`.
+In that case, prefix it with `uv run`, e.g. `uv run caddie update`.
+Check for this once at the start rather than discovering it after a
+failed call.
+
 ## Steps
 
 1. Run:

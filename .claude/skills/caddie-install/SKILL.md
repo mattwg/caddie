@@ -15,6 +15,31 @@ that script, not here.
 skill can't answer an interactive stdin prompt on the user's behalf, so
 always call it with every value already known passed as a flag.
 
+## Invoking the CLI
+
+Every `caddie ...` command below assumes `caddie` is on `PATH`. If the
+working directory is a checkout of the Caddie project itself (look for
+a `pyproject.toml` with `name = "caddie"` at or above the working
+directory), the `caddie` entry point only exists inside that project's
+own virtualenv — running it bare will fail with `command not found`.
+In that case, prefix every `caddie` command below with `uv run`, e.g.
+`uv run caddie install` (`uv run` also handles syncing dependencies
+the first time, so no separate sync step is needed). Check for this
+once at the start rather than discovering it after a failed call.
+
+`uv run` itself needs `uv` installed. Check with `uv --version`; if
+that fails, install it with:
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+before running any `caddie` command. This is the one piece of setup
+Caddie can't bootstrap through its own CLI, since the CLI can't run at
+all without `uv` already present — everything after that (the pinned
+Python version, dependencies, other tooling) is handled by `caddie
+install` itself.
+
 ## Steps
 
 1. Check whether `~/.caddie/caddie.yaml` already exists. If so, just run:
