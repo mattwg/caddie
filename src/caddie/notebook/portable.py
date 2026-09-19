@@ -67,17 +67,41 @@ def _vendor_source(defined_in: type | ModuleType) -> str:
     return Path(inspect.getsourcefile(defined_in)).read_text().rstrip()
 
 
+def _indent(source: str, spaces: int = 4) -> str:
+    pad = " " * spaces
+    return "\n".join(pad + line if line.strip() else line for line in source.splitlines())
+
+
 def _render_setup_cell(connector_name: str, connector_settings: dict) -> str:
+    """Marimo requires each global name to have exactly one defining
+    cell - unlike the original setup cell's `import ... as
+    _caddie_template`, which only ever exposed the module object
+    itself, splicing a vendored module's source in directly would leak
+    every name it imports/defines (e.g. `go` for `plotly.graph_objects`)
+    into the setup cell's globals, colliding with any chart cell that
+    imports the same thing under the same alias (a `MultipleDefinitionError`
+    that only surfaces once the notebook actually runs). Wrapping each
+    vendored module in its own function and calling it restores that
+    encapsulation - only the connector instance and the template's
+    registration side effect are meant to be visible outside it."""
     connector_cls = resolve_connector_class(connector_name)
     connector_source = _vendor_source(connector_cls)
     template_source = _vendor_source(_template_module)
 
     kwargs = ", ".join(f"{key}={value!r}" for key, value in connector_settings.items())
+    build_connector = (
+        "def _caddie_build_connector():\n"
+        f"{_indent(connector_source)}\n"
+        f"    return {connector_cls.__name__}({kwargs})"
+    )
+    register_template = f"def _caddie_register_template():\n{_indent(template_source)}"
+
     return (
         "import marimo as mo\n\n"
-        f"{connector_source}\n\n"
-        f"{template_source}\n\n"
-        f"conn = {connector_cls.__name__}({kwargs})\n"
+        f"{build_connector}\n\n"
+        f"{register_template}\n\n"
+        "_caddie_register_template()\n"
+        "conn = _caddie_build_connector()\n"
         "connector = conn"
     )
 

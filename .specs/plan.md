@@ -280,6 +280,19 @@ Testing step 18 surfaced a real inefficiency: both the working notebook's and th
 
 ---
 
+## Step 20 — Fix name collisions in vendored portable setup cells
+
+A real `/caddie-share` run failed at runtime with `NameError: name 'mo' is not defined` in the first cell - actually a downstream symptom of `MultipleDefinitionError: The variable 'go' was defined by another cell`. Splicing a vendored module's source directly into the setup cell (step 18) leaked every name it imports/defines into the setup cell's globals - including `go` (`plotly.graph_objects`), which a chart cell also imports under the same alias. Marimo requires exactly one defining cell per global name, so it refused to run either, cascading into the reported error. The original caddie-backed setup cell never had this problem because `from caddie.charting import template as _caddie_template` only ever exposed the module object, not its internals.
+
+**Definition of done:**
+- `_render_setup_cell` wraps each vendored module's source in its own function (`_caddie_build_connector`, `_caddie_register_template`) and calls it, so only the connector instance and the template's registration side effect are visible outside it - matching the encapsulation the original setup cell had.
+- Reproduced the exact failure against the real project that hit it (`marimo export html --sandbox` on its `notebook.portable.py`), confirmed the fix resolves it with a clean exit and no `MultipleDefinitionError`.
+- Added a regression case: a `fake`-connector project with a chart step that does `import plotly.graph_objects as go` (the exact collision shape) exports cleanly under `--sandbox`.
+
+**Commit:** "Fix name collisions in vendored portable setup cells"
+
+---
+
 ## Deferred — Future phase (not part of this build)
 
 **Context/RAG plugin.** Per requirements.md, this is explicitly deferred and not one of the steps above — recorded here so it isn't lost, and so a future step is scoped before work starts on it:
