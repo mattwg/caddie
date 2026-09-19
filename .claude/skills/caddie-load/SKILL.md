@@ -15,6 +15,17 @@ previous run lives in `caddie notebook-rerun`. This skill's job is to
 load the notebook's contents into the conversation and relay that
 script's output; it does not re-run queries or diff results itself.
 
+## Invoking the CLI
+
+The command below assumes `caddie` is on `PATH`. If the working
+directory is a checkout of the Caddie project itself (look for a
+`pyproject.toml` with `name = "caddie"` at or above the working
+directory), the `caddie` entry point only exists inside that project's
+own virtualenv — running it bare will fail with `command not found`.
+In that case, prefix it with `uv run`, e.g. `uv run caddie
+notebook-rerun ...`. Check for this once at the start rather than
+discovering it after a failed call.
+
 ## Steps
 
 1. Read the notebook file directly (`~/caddie/notebooks/<username>/
@@ -36,7 +47,13 @@ script's output; it does not re-run queries or diff results itself.
    notebook to a static HTML file. The notebook's own cells are never
    rewritten by this step.
 
-3. Relay the result:
+3. Open the rendered notebook for the user: run `open <rendered path>`
+   (macOS) via a shell command — Claude Code's chat UI can't render a
+   `file://...` link as clickable, so launching it directly is the
+   only way a click isn't required. Do this every time, not just on
+   request.
+
+4. Relay the result:
    - Report a concrete comparison to the previous run for each query
      step that succeeded (the row-count delta the script prints), not
      just "it ran"; for a chart step, report whether it still produces
@@ -49,14 +66,15 @@ script's output; it does not re-run queries or diff results itself.
      see and discuss the notebook regardless — but call out that
      step's re-run error clearly and specifically, quoting the printed
      error rather than summarizing it away.
-   - Give the user the re-rendered `open` link (a clickable line, e.g.
-     `[Open analysis](file:///Users/.../notebook.html)`) so they have
-     something to open without launching `marimo edit` themselves.
+   - A one-line note that the notebook opened in their browser, plus
+     the absolute path as plain text as a fallback in case the open
+     command failed (e.g. no default browser handler) — not formatted
+     as a `file://` link.
    - `overall: ok` — everything re-ran cleanly.
    - `overall: partial` — some steps (or the render itself) failed;
      list which ones.
 
-4. Treat this project as the active one for the rest of the
+5. Treat this project as the active one for the rest of the
    conversation: a plain follow-up afterward is an implicit
    continuation, same as with `/caddie-ask` — a new episode in this
    project (`caddie notebook-start --project <this project>`), not a

@@ -9,6 +9,17 @@ This skill never walks the filesystem itself — it only invokes the
 `caddie list` CLI (implemented in Caddie core) and relays its output.
 All globbing and mtime sorting happens inside that script.
 
+## Invoking the CLI
+
+The command below assumes `caddie` is on `PATH`. If the working
+directory is a checkout of the Caddie project itself (look for a
+`pyproject.toml` with `name = "caddie"` at or above the working
+directory), the `caddie` entry point only exists inside that project's
+own virtualenv — running it bare will fail with `command not found`.
+In that case, prefix it with `uv run`, e.g. `uv run caddie list`. Check
+for this once at the start rather than discovering it after a failed
+call.
+
 ## Steps
 
 1. Run:

@@ -16,6 +16,18 @@ final HTML) live in four CLI commands. This skill's job is to drive
 the loop: clarify, plan, execute, decide, answer. It does not build
 cells or run queries itself — every one of those is a script call.
 
+## Invoking the CLI
+
+Every `caddie ...` command below assumes `caddie` is on `PATH` (true
+for a normal install via `/caddie-install`). If the working directory
+is a checkout of the Caddie project itself (look for a `pyproject.toml`
+with `name = "caddie"` at or above the working directory), the `caddie`
+entry point only exists inside that project's own virtualenv — running
+it bare will fail with `command not found`. In that case, prefix every
+`caddie` command below with `uv run`, e.g. `uv run caddie
+notebook-start ...`. Check for this once at the start rather than
+discovering it after a failed call.
+
 ## Steps
 
 1. Read `~/.caddie/caddie.yaml`. If it doesn't exist, tell the user to
@@ -106,17 +118,25 @@ cells or run queries itself — every one of those is a script call.
    whole notebook to a static HTML file; read back `rendered`/`open`
    from its output.
 
-9. Relay to the user:
-   - The answer text itself — a genuine conclusion, not row/column
-     counts.
-   - The `open` link as a clickable line (e.g.
-     `[Open analysis](file:///Users/.../notebook.html)`) — that's what
-     the user actually opens; `notebook.py` remains the editable source
-     if they want to modify it in `marimo edit` themselves.
-   - If the plan was revised mid-analysis, a one-line note that it was
-     (the full plan is in the notebook, not repeated in chat).
-   - If a step failed and you answered from what remained, say so.
-   - Never paste raw preview rows into chat.
+9. Open the rendered notebook for the user: run `open <rendered path>`
+   (macOS) via a shell command — Claude Code's chat UI can't render a
+   `file://...` link as clickable, so launching it directly is the
+   only way a click isn't required. Do this every time, not just on
+   request.
+
+10. Relay to the user:
+    - The answer text itself — a genuine conclusion, not row/column
+      counts.
+    - A one-line note that the notebook opened in their browser, plus
+      the absolute path as plain text as a fallback in case the open
+      command failed (e.g. no default browser handler) — not
+      formatted as a `file://` link. `notebook.py` remains the
+      editable source if they want to modify it in `marimo edit`
+      themselves.
+    - If the plan was revised mid-analysis, a one-line note that it
+      was (the full plan is in the notebook, not repeated in chat).
+    - If a step failed and you answered from what remained, say so.
+    - Never paste raw preview rows into chat.
 
 ## Continuation
 
