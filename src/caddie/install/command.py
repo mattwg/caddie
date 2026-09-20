@@ -17,10 +17,13 @@ from caddie.config.model import CaddieConfig
 from caddie.connectors.loader import load_connector_from_config
 from caddie.install.defaults import load_defaults
 from caddie.install.identity import resolve_username
+from caddie.install.marimo_pair import install_marimo_pair_skill
 from caddie.install.notebooks import ensure_user_notebooks_dir, resolve_notebooks_root
 from caddie.install.prompts import prompt_list, prompt_value
 from caddie.install.skill_repo import resolve_skill_repo
 from caddie.install.tooling import ensure_uv_installed
+
+CADDIE_CORE_ROOT = Path(__file__).resolve().parents[3]
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
@@ -130,6 +133,10 @@ def _finish_install(
     results = run_checks(
         [
             ("uv installed", ensure_uv_installed),
+            (
+                "marimo-pair skill installed",
+                lambda: install_marimo_pair_skill(CADDIE_CORE_ROOT),
+            ),
             (
                 "notebooks root ready",
                 lambda: ensure_user_notebooks_dir(notebooks_root, username),

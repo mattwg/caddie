@@ -12,6 +12,7 @@ from pathlib import Path
 from caddie.checks import print_summary, run_checks
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config, save_config
 from caddie.connectors.loader import load_connector_from_config
+from caddie.install.marimo_pair import upgrade_marimo_pair_skill
 from caddie.install.skill_repo import pull_skill_repo, resolve_skill_repo
 from caddie.install.tooling import upgrade_uv
 
@@ -57,6 +58,10 @@ def run(args: argparse.Namespace) -> int:
     results = run_checks(
         [
             ("uv up to date", upgrade_uv),
+            (
+                "marimo-pair skill up to date",
+                lambda: upgrade_marimo_pair_skill(CADDIE_CORE_ROOT),
+            ),
             ("skill repo up to date", _refresh_skill_repo),
             ("python dependencies synced", _sync_dependencies),
             ("connector auth valid", _verify_connector_auth),
