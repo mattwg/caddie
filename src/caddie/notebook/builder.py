@@ -243,7 +243,10 @@ def append_step(
 
     if kind == "query":
         cell_name = f"code_{var_prefix}"
-        body = f"query_{var_prefix} = {code!r}\nresult_{var_prefix} = conn.execute(query_{var_prefix})"
+        body = (
+            f"query_{var_prefix} = {_format_query_literal(code)}\n"
+            f"result_{var_prefix} = conn.execute(query_{var_prefix})"
+        )
         output_body = f"result_{var_prefix}"
     else:
         cell_name = f"chart_{var_prefix}"
@@ -350,3 +353,17 @@ def _extract_query_code(cell_code: str) -> str:
     if not match:
         raise InvalidNotebookError(Path("<query cell>"))
     return ast.literal_eval(match.group(1))
+
+
+def _format_query_literal(code: str) -> str:
+    """Render `code` as a Python string literal for a query cell.
+
+    Multi-line queries get a real triple-quoted string, so the notebook
+    reads with actual line breaks instead of a single `\\n`-escaped
+    line. `ast.literal_eval` (used by `_extract_query_code`) parses
+    either form back to the same string.
+    """
+    if "\n" not in code:
+        return repr(code)
+    escaped = code.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+    return f'"""{escaped}"""'

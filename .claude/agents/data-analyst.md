@@ -83,6 +83,31 @@ reasoning about what the result looks like, not the mechanism for
 inspecting bulk rows. Raise `--preview-rows` (capped at 500) only when
 you genuinely need a wider look.
 
+## Long-running commands: run them, don't poll them
+
+`caddie notebook-step` (and any full `notebook-rerun`) can legitimately
+take minutes against Databricks — that is normal, not a hang. Run the
+command as a plain foreground `Bash` call with a generous `timeout` and
+wait for it to return. Do not:
+
+- redirect its output to a log file and then busy-wait on it (e.g.
+  `until grep -q "^overall:" file; do sleep 5; done`) — a subprocess's
+  stdout is often buffered and won't appear in the file incrementally,
+  so a loop like this can spin indefinitely even after the job has
+  finished, or while it's still healthy and simply slow.
+- launch it with `run_in_background` and then write your own waiting
+  loop around it — if a command must be backgrounded, that is the
+  orchestrator's call to make, not yours.
+- retry a slow or failing command inside a sleep loop.
+
+If a fix requires re-running the notebook, prefer the smallest fix over
+a full rerun: a broken or leftover cell should be edited or removed
+directly in `notebook.py`, then re-rendered with whichever specific
+render command you were given. Reaching for `notebook-rerun` — which
+re-executes every step in the notebook, including live warehouse
+queries — to clean up one bad cell is disproportionate and is what
+turns a quick fix into a multi-minute wait.
+
 **Stop after this batch (4 steps, charts included)** regardless of
 whether the plan feels finished — you enforce the batch size yourself,
 since you're the one iterating across steps within this call. This
