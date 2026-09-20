@@ -87,6 +87,18 @@ before `code_{E}_{S}` (a query, bound to `query_{E}_{S}` /
 holding the result/figure. `{E}` is the episode, `{S}` is the next step
 number — keep numbering from the current highest step in this episode.
 
+`code_{E}_{S}`/`chart_{E}_{S}` must only compute and assign — never end
+that cell on a bare variable reference (`result_{E}_{S}` or
+`chart_{E}_{S}` as the last line before `return`). Marimo auto-displays
+a cell's trailing bare expression, so a code cell that ends that way
+renders the dataframe or figure itself, and `output_{E}_{S}` then
+renders it again immediately below — the same object shown twice for
+no reason. The display belongs in exactly one place: `output_{E}_{S}`.
+Before running `code_{E}_{S}`/`chart_{E}_{S}`, check its last line
+isn't a bare `result_{E}_{S}`/`chart_{E}_{S}` — if it is, drop that
+line (or assign it to `_` , e.g. `_ = result_{E}_{S}`, if the shape
+`help(cm)` showed requires a trailing statement).
+
 Always give the step a short plain-language description, written as
 its own markdown cell right before the query/chart. For a chart step,
 the description is where the detail belongs — what the chart shows,
@@ -118,7 +130,9 @@ chart's figure description) from the cell you just ran and decide:
   clutter, not a bonus. Keep the explanation in the description, not in
   the figure's title (see above) — if the chart benefits from a short
   in-figure title at all, a few words identifying the axes/series is
-  enough, not a restatement of the description.
+  enough, not a restatement of the description. See the no-bare-trailing-
+  expression rule above — the same rule that keeps a chart from
+  rendering twice applies to any result/dataframe step too.
 
 Push aggregation/filtering into the SQL itself rather than relying on
 the preview to "see more data" — the preview is bandwidth for your own
@@ -174,6 +188,32 @@ was really just you checking something along the way — if the latter,
 remove it. Only note in your report the steps that survive; don't
 describe a step you've since deleted as if it were part of the
 analysis.
+
+## Final check before reporting back
+
+This is a separate pass from the pruning review above — that one asks
+whether a step belongs in the notebook at all; this one asks whether
+each surviving step's cells are actually correct, by reading their
+source back, not just their output. Once every step is decided and
+pruned, read back the current code (not the preview, the cell source
+itself — per whatever `help(cm)` showed for inspecting a cell's body)
+of every `code_{E}_{S}`/`chart_{E}_{S}` cell you're leaving in the
+notebook and confirm:
+
+- It doesn't end on a bare `result_{E}_{S}`/`chart_{E}_{S}` reference
+  (see "Running the plan" above) — that duplicates whatever
+  `output_{E}_{S}` already shows.
+- `output_{E}_{S}` itself renders the step's result/figure exactly
+  once, not zero times (a step with no visible output is as broken as
+  a doubled one) and not stacked with an unrelated second object.
+- If you edited a step in place after first writing it, the
+  description cell still matches what the code now actually does — an
+  in-place fix to the query without touching the description leaves a
+  stale explanation next to the corrected result.
+
+Fix anything this turns up the same way as "Fixing a step that came
+out wrong" below, before writing your report — don't let the report
+describe a notebook state you haven't actually re-verified.
 
 ## Fixing a step that came out wrong
 
