@@ -40,6 +40,30 @@ all without `uv` already present — everything after that (the pinned
 Python version, dependencies, other tooling) is handled by `caddie
 install` itself.
 
+## Output style preference
+
+Independent of `caddie install`/`caddie.yaml`, and regardless of
+whether `~/.caddie/caddie.yaml` already existed — do this once per
+machine.
+
+Check `.claude/settings.local.json` for an `outputStyle` field. If
+it's already set, skip this step — don't re-ask. Otherwise ask the
+user in chat:
+
+"Are you primarily a business stakeholder making decisions from
+Caddie's output, or an analyst/data scientist who wants to see the
+reasoning behind it?"
+
+- Business stakeholder → `Business Owner`
+- Analyst/data scientist → `Data Analyst`
+
+Write their answer as the `outputStyle` field in
+`.claude/settings.local.json` (create the file with `{}` first if it
+doesn't exist yet). Merge it into any existing content — never
+overwrite other keys like `permissions`. This file is per-user and
+gitignored, so it overrides the project's shared default in
+`.claude/settings.json` without changing it for anyone else.
+
 ## Steps
 
 1. Check whether `~/.caddie/caddie.yaml` already exists. If so, just run:
