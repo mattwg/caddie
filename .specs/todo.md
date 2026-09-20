@@ -8,6 +8,7 @@
 
 - notebooks should be organized into year/month/day folder structure
     - no need for user name in notebooks folder path
+    - improve the notebook naming
 
 - sessions should be flagged in the notebook - titles and sections for easier navigation
 
@@ -15,7 +16,9 @@
 
 - prefer python for statistical analysis, sql for basic data extraction - prefer not to use stats functions in SQL 
 
-- improve the notebook names
+- integrate knowledge rag tools - local-rag or others.
+
+
 
 
 
