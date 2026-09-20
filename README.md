@@ -102,11 +102,9 @@ All three sub systmes are pluggable via configuration, and do not require code c
 
 - [Marimo](https://marimo.io) notebooks (`.py` files, not `.ipynb`):
   pure Python, git-diffable, and reactive.
-- **Marimo Pair**, a skill that drives a live Marimo kernel directly:
+- [Marimo Pair](https://marimo.io/pair), a skill that drives a live Marimo kernel directly - 
   running code in the same runtime the user sees, inspecting live
-  notebook state, and committing durable notebook changes. It's what
-  powers `/caddie-edit` and hand-editing a notebook without restarting
-  the session.
+  notebook state, and committing durable notebook changes. 
 - [Plotly](https://plotly.com/python/) for charts, with a shared
   template so every notebook looks consistent regardless of which org
   or skill produced it.
