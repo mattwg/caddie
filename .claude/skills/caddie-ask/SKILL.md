@@ -76,6 +76,21 @@ continuation):
      -c "import marimo._code_mode as cm; help(cm)"
    ```
    Do this once per episode, before any other `cm` usage.
+3. For a **new project only**, the notebook file was just created and its
+   `setup` cell (the one defining `mo` and the connector) has never run in
+   this kernel — opening the browser tab does not guarantee its autorun has
+   finished before you start issuing `cm` calls. Check its status and run it
+   if stale, before creating `question_1`/`plan_1`, or a cell referencing
+   `mo` can fail with `NameError: name 'mo' is not defined` (see
+   [gotchas.md](../marimo-pair/reference/gotchas.md#a-brand-new-notebooks-cells-may-not-have-run-yet)):
+   ```
+   bash <skill-dir>/scripts/execute-code.sh --url <url> --file <file> \
+     -c "import marimo._code_mode as cm; print(cm.get_context().cells['setup'].status)"
+   ```
+   If it prints `stale`, run it (as its own `execute-code.sh` call, inside
+   `async with cm.get_context() as ctx: ctx.run_cell('setup')`) before
+   continuing. Skip this for a continuation — an existing project's kernel
+   has already run `setup`.
 
 Every cell this orchestrator writes goes through that paired session —
 a scratchpad `execute-code.sh` call running Python inside `async with
@@ -94,6 +109,31 @@ showed you. Use these shapes:
   `mo.md({answer_markdown!r})`, created once at the end (never edited —
   one answer per episode; if you find yourself about to write a second
   one, something upstream is wrong, not something to paper over here).
+
+Build the `repr()` inline, in the same Python that's fed to
+`execute-code.sh`, in a single call — don't round-trip the markdown
+through bash first (e.g. `cat`-ing it to a file, `exec`-ing it to
+compute a `repr()`, then re-injecting that into a second script). A
+quoted heredoc (`<<'PYEOF'`) passes the markdown through bash
+unmodified, so a triple-quoted variable *inside that scratchpad script*
+is fine — it's never the notebook's saved cell code, only the
+single-line `f"mo.md({{...!r}})"` result is:
+
+```bash
+bash <skill-dir>/scripts/execute-code.sh --url <url> --file <file> - <<'PYEOF'
+import marimo._code_mode as cm
+
+PLAN_MD = """## Analysis Plan
+...actual markdown, verbatim...
+"""
+
+async with cm.get_context() as ctx:
+    cid = ctx.create_cell(f"mo.md({PLAN_MD!r})", name="plan_1")
+    ctx.run_cell(cid)
+PYEOF
+```
+
+The same one-call pattern applies to `question_{E}` and `answer_{E}`.
 
 `data-analyst` pairs with this same server for its own step cells
 (`description_{E}_{S}`/`code_{E}_{S}`/`chart_{E}_{S}`/`output_{E}_{S}`)
