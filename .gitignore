@@ -214,5 +214,14 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# marimo-pair skill: installed by `caddie install`/`caddie update` via
+# `caddie.install.marimo_pair` (the `skills` CLI), not vendored in this
+# repo's git history. The CLI writes the real content under
+# `.agents/skills/` and symlinks `.claude/skills/<name>` to it, so both
+# need ignoring; a trailing "/" wouldn't match the symlinks.
+.agents/
+.claude/skills/marimo-pair
+.claude/skills/retro-marimo-pair
+
 # Streamlit
 .streamlit/secrets.toml

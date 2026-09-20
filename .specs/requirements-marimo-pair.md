@@ -180,13 +180,28 @@ pair with otherwise. Concretely, this needs:
   `notebook-edit` opens the URL itself (`webbrowser.open`) whenever no
   session exists yet, rather than waiting for a human — the same thing
   a human running `/caddie-edit` would otherwise do by hand.
-- **The `marimo-pair` skill itself**, installed as a project skill at
+- **The `marimo-pair` skill itself**, present as a project skill at
   `.claude/skills/marimo-pair` (the actual `marimo-team/marimo-pair`
   GitHub repo's content: `SKILL.md` plus `scripts/discover-servers.sh`,
   `scripts/execute-code.sh`, and `reference/*.md`) that `data-analyst`
   invokes through its existing `Skill` tool access — no new tool type
   needed, and (unlike the original MCP-based draft of this plan) no
-  dynamic registration step of any kind.
+  dynamic registration step of any kind. It's not vendored into this
+  repo's git history: `caddie install`/`caddie update` fetch it fresh
+  via `caddie.install.marimo_pair` (`uvx deno -A npm:skills add|upgrade
+  marimo-team/marimo-pair` — `uvx` rather than `npx`, since caddie
+  already depends on `uv` and this avoids a separate Node/`npx`
+  toolchain requirement). The `skills` CLI writes the actual skill
+  content under `.agents/skills/` (its universal, tool-agnostic
+  layout, shared across Codex/Amp/Antigravity/etc.) and symlinks
+  `.claude/skills/marimo-pair` to it — both are gitignored, so a stale
+  hand-copied snapshot can't drift from upstream. It also installs a
+  bundled `retro-marimo-pair` skill from the same source, handled the
+  same way. What *is* committed is `skills-lock.json` (repo root), the
+  CLI's lockfile pinning each skill's resolved content hash — that's
+  what makes an upstream version bump a reviewable diff instead of a
+  silent change on whichever machine happens to run `caddie
+  update` next.
 
 ### One shared server per user, not one per project
 
