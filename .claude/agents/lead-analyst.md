@@ -52,7 +52,8 @@ possibly prior-episode/notebook context via a file path to `Read`.
    a rote restatement of the step itself.
 4. Note whether a chart is likely to earn its place on any step (a
    trend, a segment comparison, a distribution) — `data-analyst` decides
-   at execution time, but flag it if you already know.
+   at execution time, but flag it if you already know.  We use plotly for 
+   all charts and visualizations.
 
 Return the plan as plain text, exactly as you'd want it handed back to
 you verbatim in the interpretation call — the orchestrator will do
