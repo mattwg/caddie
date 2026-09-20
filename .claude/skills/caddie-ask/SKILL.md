@@ -230,7 +230,7 @@ a step cell itself.
    `caddie-edit` skill for this project (same as a user typing
    `/caddie-edit <slug>` themselves) — it finds the same shared server
    this episode has already been pairing against and opens it landed on
-   marimo's "Present" view (`?filename=<file>&view-as=present`). This
+   marimo's "Present" view (`?file=<file>&view-as=present`). This
    matters, not just style: the static HTML from step 8 has no running
    kernel, so any `mo.ui.table`/dataframe output in it degrades to an
    inert "Preview data" button that can't fetch rows — the live server
