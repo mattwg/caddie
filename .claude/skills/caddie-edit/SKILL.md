@@ -63,13 +63,13 @@ discovering it after a failed call.
    needed in the next step since the server may be hosting several
    projects' notebooks at once.
 
-3. Open the printed `url`, with `?filename=<file>&view-as=present`
+3. Open the printed `url`, with `?file=<file>&view-as=present`
    appended — `<file>` is the exact path `notebook-edit` printed as
    `file:`, URL-encoded (e.g.
-   `http://localhost:2718/?filename=%2FUsers%2F...%2Fnotebook.py&view-as=present`).
+   `http://localhost:2718/?file=%2FUsers%2F...%2Fnotebook.py&view-as=present`).
    Both are real marimo query parameters, not a separate server mode:
    it's the same shared edit-mode server, just selecting which
-   project's notebook to load (`filename`) and landing the browser on
+   project's notebook to load (`file`) and landing the browser on
    marimo's "Present" view for it (code hidden, outputs and data
    tables rendered live) instead of the code-visible editor. The user
    can still switch back to the editor from within the page using

@@ -39,12 +39,15 @@ one by its file path (`execute-code.sh --file <path>`, matching
 active *session* for the target file, which only exists once something
 has opened it in a browser - `--headless` alone never creates one.
 Since `data-analyst` runs unattended, `run()` opens the project's URL
-itself (`webbrowser.open`, with a `?filename=` query param selecting
-which notebook inside the shared workspace to load - confirmed against
-marimo's own frontend, `FilenameState.getFilename`/`setSearchParam` in
-its bundled JS) whenever no session for that file exists yet, the same
-way a human using `/caddie-edit` would open it by hand, and waits
-briefly for the session to register before returning.
+itself (`webbrowser.open`, with a `?file=` query param selecting which
+notebook inside the shared workspace to load - `FILE_QUERY_PARAM_KEY`
+in marimo's own `_server/api/endpoints/assets.py`, which is what its
+`/` route actually reads to resolve a workspace file; a `?filename=`
+param, used in an earlier version of this code, is not read by that
+route at all and silently falls back to the home page) whenever no
+session for that file exists yet, the same way a human using
+`/caddie-edit` would open it by hand, and waits briefly for the
+session to register before returning.
 """
 
 import argparse
@@ -154,7 +157,7 @@ def run(args: argparse.Namespace) -> int:
     else:
         print("session: none")
         print(
-            f"note: opened {url}?filename={urllib.parse.quote(str(nb_path))} in a "
+            f"note: opened {url}?file={urllib.parse.quote(str(nb_path))} in a "
             f"browser but no session appeared within {_SESSION_TIMEOUT_SECONDS}s - "
             "open it manually and retry before pairing."
         )
@@ -229,7 +232,7 @@ def ensure_session(url: str, nb_path: Path) -> bool:
     if _has_session_for(url, nb_path):
         return True
 
-    webbrowser.open(f"{url}?filename={urllib.parse.quote(str(nb_path))}")
+    webbrowser.open(f"{url}?file={urllib.parse.quote(str(nb_path))}")
     deadline = time.monotonic() + _SESSION_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         if _has_session_for(url, nb_path):
