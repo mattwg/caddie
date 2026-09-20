@@ -5,9 +5,9 @@ reflects the latest data.
 
 Backs `/caddie-load`: that skill loads the notebook's cells into the
 conversation itself (a Claude Code-only step, not something a script
-can do); this command only does the re-execution, diff-reporting, and
-re-render. The notebook's own cells are never rewritten here - only its
-sidecar execution state and its rendered HTML export are.
+can do); this command only does the re-execution and re-render. The
+notebook's own cells are never rewritten here - only its rendered HTML
+export is.
 """
 
 import argparse
@@ -20,13 +20,13 @@ from caddie.install.notebooks import resolve_notebooks_root
 from caddie.notebook.builder import NotebookEpisode, existing_episodes, notebook_path
 from caddie.notebook.executor import execute_and_summarize, execute_chart
 from caddie.notebook.render import RenderError, render_notebook
-from caddie.notebook.state import ProjectState, StepStats, load_state, save_state
+from caddie.notebook.state import ProjectState, load_state, save_state
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
     parser = subparsers.add_parser(
         "notebook-rerun",
-        help="Re-execute an existing project's notebook and report changes.",
+        help="Re-execute an existing project's notebook.",
     )
     parser.add_argument("--project", required=True, help="Existing project slug to re-run.")
     parser.add_argument(
@@ -59,12 +59,11 @@ def run(args: argparse.Namespace) -> int:
         connector=config.connector, connector_settings=config.connector_settings
     )
     connector = load_connector(state.connector, **state.connector_settings)
+    save_state(project_dir, state)
 
     all_ok = True
     for episode in existing_episodes(project_dir):
-        all_ok &= _rerun_episode(episode, connector, state)
-
-    save_state(project_dir, state)
+        all_ok &= _rerun_episode(episode, connector)
 
     try:
         rendered = render_notebook(project_dir)
@@ -78,22 +77,15 @@ def run(args: argparse.Namespace) -> int:
     return 0 if all_ok else 1
 
 
-def _rerun_episode(episode: NotebookEpisode, connector, state: ProjectState) -> bool:
+def _rerun_episode(episode: NotebookEpisode, connector) -> bool:
     ok = True
     steps_so_far = []
 
     for s in episode.steps:
-        key = f"{episode.index}_{s.step}"
-        previous = state.steps.get(key)
-
         if s.kind == "query":
             result = execute_and_summarize(connector, s.code)
             if result.ok:
-                state.steps[key] = StepStats(
-                    kind="query", row_count=result.row_count, columns=result.columns or []
-                )
-                delta = _format_delta(previous, result.row_count)
-                print(f"episode {episode.index} step {s.step} (query): ok rows={result.row_count}{delta}")
+                print(f"episode {episode.index} step {s.step} (query): ok rows={result.row_count}")
             else:
                 ok = False
                 print(f"episode {episode.index} step {s.step} (query): error: {result.error}")
@@ -101,7 +93,6 @@ def _rerun_episode(episode: NotebookEpisode, connector, state: ProjectState) -> 
             chart_var = f"chart_{episode.index}_{s.step}"
             chart_result = execute_chart(connector, steps_so_far, s.code, chart_var)
             if chart_result.ok:
-                state.steps[key] = StepStats(kind="chart")
                 print(f"episode {episode.index} step {s.step} (chart): ok {chart_result.description}")
             else:
                 ok = False
@@ -112,12 +103,3 @@ def _rerun_episode(episode: NotebookEpisode, connector, state: ProjectState) -> 
     print(f"episode {episode.index} plan: {episode.plan or 'none recorded'}")
     print(f"episode {episode.index} answer: {episode.answer or 'none recorded'}")
     return ok
-
-
-def _format_delta(previous: StepStats | None, row_count: int | None) -> str:
-    if previous is None or previous.row_count is None or row_count is None:
-        return ""
-    delta = row_count - previous.row_count
-    if delta == 0:
-        return " (unchanged)"
-    return f" ({'+' if delta > 0 else ''}{delta} vs previous run)"

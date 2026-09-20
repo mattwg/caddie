@@ -20,7 +20,7 @@ from caddie.notebook.builder import (
     notebook_path,
 )
 from caddie.notebook.executor import DEFAULT_PREVIEW_ROWS, execute_and_summarize, execute_chart
-from caddie.notebook.state import ProjectState, StepStats, load_state, save_state
+from caddie.notebook.state import ProjectState, load_state
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
@@ -89,21 +89,16 @@ def run(args: argparse.Namespace) -> int:
     connector = load_connector(state.connector, **state.connector_settings)
 
     if args.kind == "query":
-        return _run_query_step(project_dir, state, args.episode, step, connector, code, args.preview_rows)
-    return _run_chart_step(project_dir, state, args.episode, step, connector, code)
+        return _run_query_step(project_dir, args.episode, step, connector, code, args.preview_rows)
+    return _run_chart_step(project_dir, args.episode, step, connector, code)
 
 
-def _run_query_step(project_dir, state, episode, step, connector, code, preview_rows) -> int:
+def _run_query_step(project_dir, episode, step, connector, code, preview_rows) -> int:
     result = execute_and_summarize(connector, code, preview_rows=preview_rows)
     if not result.ok:
         print("status: error")
         print(f"error: {result.error}")
         return 1
-
-    state.steps[f"{episode}_{step}"] = StepStats(
-        kind="query", row_count=result.row_count, columns=result.columns or []
-    )
-    save_state(project_dir, state)
 
     print("status: ok")
     print(f"rows: {result.row_count}")
@@ -112,7 +107,7 @@ def _run_query_step(project_dir, state, episode, step, connector, code, preview_
     return 0
 
 
-def _run_chart_step(project_dir, state, episode, step, connector, code) -> int:
+def _run_chart_step(project_dir, episode, step, connector, code) -> int:
     prior_steps = [
         s
         for e in existing_episodes(project_dir)
@@ -126,9 +121,6 @@ def _run_chart_step(project_dir, state, episode, step, connector, code) -> int:
         print("status: error")
         print(f"error: {result.error}")
         return 1
-
-    state.steps[f"{episode}_{step}"] = StepStats(kind="chart")
-    save_state(project_dir, state)
 
     print("status: ok")
     print(f"chart: {result.description}")

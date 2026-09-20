@@ -202,7 +202,6 @@ Bring an existing notebook back into context — the general-purpose way to resu
 - Locate the named project under the user's notebooks folder.
 - Load the notebook's existing episodes (question, plan, steps, answer) into the conversation's context, so the user can immediately ask follow-up questions against it the same way they could mid-session with `/caddie-ask` (same implicit-continuation behavior, same anti-bypass rule: once loaded, treat this as the active project for follow-ups — a plain follow-up becomes a new episode).
 - By default, re-execute every step in every episode, in order, against live data, via the connector recorded for that project (a notebook always re-runs against the same connector it was created with) — loading a notebook implies wanting current data, not a stale snapshot. Plan and answer cells are reported, not re-executed.
-- Report what changed in the output (e.g. row counts, key metric deltas) compared to the previous run, where feasible, and re-render the click-to-open file so its link reflects the latest data.
 - Fail clearly (not silently) if a step no longer runs (e.g. schema changes, auth expired, connector unreachable) — loading context still succeeds in this case (the user can see and discuss the existing notebook), only that step's re-run (and the render, if it depends on that step) fails.
 
 ### `/caddie-list [pattern]`

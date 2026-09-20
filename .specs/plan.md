@@ -177,6 +177,8 @@ Wire up non-interactive execution of the generated notebook against the connecto
 
 ## Step 13 — `/caddie-load`
 
+> **Removed later:** the diff-style report (row-count comparison to the previous run) described below was dropped — see the note after Step 16.
+
 Implement bringing an existing notebook back into context (including in a fresh conversation that never ran `/caddie-ask` for it), re-executing it by default against the same connector it was created with, and the diff-style report.
 
 **Definition of done:**
@@ -230,6 +232,8 @@ Steps 12–14 made `/caddie-ask` execute exactly one query and report its shape 
 - `/caddie-ask` and `/caddie-load` SKILL.md instructions reflect the clarify → plan → execute (revisable) → answer loop, including the iteration cap and the rule that a wider preview is a deliberate exception, not the default way to see more data.
 
 **Commit:** "Rebuild /caddie-ask as an iterative clarify/plan/execute/answer loop"
+
+> **Removed later:** the per-step row-count/delta tracking in `.caddie_project.json` (introduced here and in Step 13) was removed as a non-requirement — `caddie notebook-rerun` now just re-executes and reports plain per-step results, with no comparison to the previous run.
 
 ---
 
