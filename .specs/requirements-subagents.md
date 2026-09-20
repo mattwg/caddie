@@ -155,10 +155,10 @@ plan:
   Given the plan it wrote and `data-analyst`'s consolidated report,
   `lead-analyst` writes the final natural-language answer — a number,
   a short table, whatever the question needs, addressing the decision
-  the plan identified. If `data-analyst` hit an uncovered deviation or
-  the step cap before finishing, `lead-analyst` answers from what's
-  available with an explicit caveat, the same standard
-  `caddie-ask/SKILL.md` already uses today. This restores
+  the plan identified. If `data-analyst` hit an uncovered deviation
+  before finishing, `lead-analyst` answers from what's available with
+  an explicit caveat, the same standard `caddie-ask/SKILL.md` already
+  uses today. This restores
   `lead-analyst`'s specialized interpretation voice on the final answer
   — the orchestrator only relays what this call returns, it doesn't
   synthesize anything itself.
@@ -184,8 +184,12 @@ schema/column detail matters more here than at planning time), and
 `Agent`/`Task` (see Spawning constraints).
 
 **Invoked by the orchestrator exactly once per episode**, with the
-full plan (including contingencies), the project/episode identifiers,
-and the step cap (4). Within that single invocation, the agent:
+full plan (including contingencies) and the project/episode
+identifiers. ~~and the step cap (4)~~ **The step cap was later removed
+entirely** (`.specs/requirements-marimo-pair.md`, "Batch cap removed")
+— `data-analyst` now runs the whole plan with no artificial limit,
+stopping only at an uncovered deviation. Within that single invocation,
+the agent:
 
 - Works through the plan's steps in order, authoring and running each
   one via `caddie notebook-step --project <slug> --episode <N>
@@ -199,10 +203,9 @@ and the step cap (4). Within that single invocation, the agent:
   `data-analyst` should improvise its way around — it stops there and
   reports the mismatch rather than guessing at a plan change nothing
   authorized.
-- Stops at the step cap regardless of whether the plan is "done" —
-  the cap is enforced by `data-analyst` itself now, since it's the one
-  actually iterating (previously the orchestrator enforced this across
-  separate calls; there's only one call now).
+- ~~Stops at the step cap regardless of whether the plan is "done"~~ —
+  no cap anymore; runs every step in the plan, stopping early only at
+  an uncovered deviation.
 - Returns one consolidated report covering every step it ran: for
   each, rows/columns, the preview (bounded per the existing
   `--preview-rows` cap) or chart description, whether it succeeded,
@@ -233,10 +236,9 @@ itself — that's `lead-analyst`'s job, via a second call once
    returns the plan (steps + contingencies).
 4. `caddie notebook-start`, then `caddie notebook-plan` with that plan
    text.
-5. Call `data-analyst` once, with the full plan and the step cap. It
-   runs every step it can (applying contingencies as needed, stopping
-   at the cap or at an uncovered deviation) and returns one
-   consolidated report.
+5. Call `data-analyst` once, with the full plan. It runs every step
+   (applying contingencies as needed, stopping only at an uncovered
+   deviation) and returns one consolidated report.
 6. Call `lead-analyst` again (interpretation call — the plan-writing
    call has already returned, so this honors the "never concurrently
    with itself" rule in Spawning constraints). This is a fresh spawn
@@ -247,18 +249,17 @@ itself — that's `lead-analyst`'s job, via a second call once
    final
    natural-language answer — a number, a short table, whatever the
    question needs, addressing the decision its own plan identified. If
-   `data-analyst` hit an uncovered deviation or the step cap before
-   finishing, `lead-analyst` answers from what's available with an
-   explicit caveat, the same standard `caddie-ask/SKILL.md` already
-   uses today.
+   `data-analyst` hit an uncovered deviation before finishing,
+   `lead-analyst` answers from what's available with an explicit
+   caveat, the same standard `caddie-ask/SKILL.md` already uses today.
 7. `caddie notebook-answer` with that answer text.
 8. Render, open, and relay to the user — unchanged from today's steps
    9–10.
 
 A plan that turns out to be wrong in a way `data-analyst` wasn't
 authorized to work around is not something this design loops back to
-fix mid-episode — it ends the episode with a caveat instead, same as
-hitting the step cap. A genuine do-over is a new episode: a follow-up
+fix mid-episode — it ends the episode with a caveat instead. A genuine
+do-over is a new episode: a follow-up
 question already starts a new episode under Caddie's existing
 continuation model (`.specs/requirements.md`), so this isn't a new
 limitation introduced here, just where the boundary now sits.

@@ -1,6 +1,6 @@
 ---
 name: caddie-load
-description: Bring an existing Caddie analysis project back into context in any conversation, including one that never ran /caddie-ask for it — loads its episodes (question, plan, steps, answer), re-executes every step by default against the connector it was created with, and re-renders a click-to-open notebook. Trigger on "/caddie-load <project>".
+description: Bring an existing Caddie analysis project back into context in any conversation, including one that never ran /caddie-ask for it — loads its episodes (question, plan, steps, answer), re-executes every step live against the project's kernel so the notebook's stored results are genuinely current, and hands back a live, click-to-open notebook. Trigger on "/caddie-load <project>".
 ---
 
 # /caddie-load <project>
@@ -10,10 +10,10 @@ follow-up question afterward behaves exactly like an implicit
 `/caddie-ask` continuation (see that skill's Continuation section) —
 the user never needs to retype `/caddie-ask` after loading.
 
-Re-executing every episode's steps lives in `caddie notebook-rerun`.
-This skill's job is to load the notebook's contents into the
-conversation and relay that script's output; it does not re-run
-queries itself.
+Re-execution pairs with the project's live kernel (via the
+`marimo-pair` skill), the same mechanism `/caddie-ask` and
+`data-analyst` use, so a reloaded notebook shows genuinely current
+results rather than a stale snapshot.
 
 ## Invoking the CLI
 
@@ -23,7 +23,7 @@ directory is a checkout of the Caddie project itself (look for a
 directory), the `caddie` entry point only exists inside that project's
 own virtualenv — running it bare will fail with `command not found`.
 In that case, prefix it with `uv run`, e.g. `uv run caddie
-notebook-rerun ...`. Check for this once at the start rather than
+notebook-edit ...`. Check for this once at the start rather than
 discovering it after a failed call.
 
 ## Steps
@@ -34,46 +34,53 @@ discovering it after a failed call.
    in context. If it doesn't exist, tell the user and suggest
    `/caddie-list` to find the right slug.
 
-2. Run:
+2. Pair with the project's kernel:
 
-   ```
-   caddie notebook-rerun --project <project>
-   ```
+   a. Run `caddie notebook-edit --project <project>`. It gives you
+      `url` and `file` (this project's notebook's absolute path).
+   b. Invoke the `marimo-pair` skill (via the `Skill` tool) and run its
+      required first call:
+      ```
+      bash <skill-dir>/scripts/execute-code.sh --url <url> --file <file> \
+        -c "import marimo._code_mode as cm; help(cm)"
+      ```
 
-   This re-executes every step (query and chart) in every episode, in
-   order, against the connector recorded for that project — not
-   necessarily the connector currently active in `caddie.yaml`. It
-   also re-renders the notebook to a static HTML file. The notebook's
-   own cells are never rewritten by this step.
+   If step 2a reports `session: none`, pairing failed — skip to step 6
+   and relay the notebook's contents read-only (from step 1), with a
+   note that nothing was re-run.
 
-3. Open the rendered notebook for the user: run `open <rendered path>`
-   (macOS) via a shell command — Claude Code's chat UI can't render a
-   `file://...` link as clickable, so launching it directly is the
-   only way a click isn't required. Do this every time, not just on
-   request.
+3. Re-run every existing step, in order, across every episode: find
+   each `code_{E}_{S}`/`chart_{E}_{S}` cell (via `ctx.cells`, per
+   whatever exact shape `help(cm)` showed) and re-run it with `cm`'s
+   run-cell operation. For each one, check its resulting status/errors,
+   and read back a query's row count or confirm a chart still produces
+   a valid figure via a scratchpad call. This runs against the
+   connector the notebook's own `setup` cell configured (its recorded
+   connector), not necessarily whatever's active in `caddie.yaml`.
 
-4. Relay the result:
-   - Report each query step's outcome (rows returned), not just "it
-     ran"; for a chart step, report whether it still produces a valid
-     figure.
-   - Note each episode's current plan and answer (printed as
-     `episode {N} plan:` / `episode {N} answer:`) so the user has the
-     substance, not just the execution status.
-   - If a specific step now fails (e.g. a dropped or renamed column),
-     still tell the user the project loaded successfully — they can
-     see and discuss the notebook regardless — but call out that
-     step's re-run error clearly and specifically, quoting the printed
-     error rather than summarizing it away.
-   - A one-line note that the notebook opened in their browser, plus
-     the absolute path as plain text as a fallback in case the open
-     command failed (e.g. no default browser handler) — not formatted
-     as a `file://` link.
-   - `overall: ok` — everything re-ran cleanly.
-   - `overall: partial` — some steps (or the render itself) failed;
-     list which ones.
+4. Render the static export too: `caddie notebook-render --project
+   <project>`. Keep its path as a fallback for step 5.
 
-5. Treat this project as the active one for the rest of the
-   conversation: a plain follow-up afterward is an implicit
-   continuation, same as with `/caddie-ask` — a new episode in this
-   project (`caddie notebook-start --project <this project>`), not a
-   new step in an old one.
+5. Open the notebook live: invoke the `caddie-edit` skill for this
+   project. This matters, not just style — only the live server shows
+   the freshly re-run results from step 3 with working
+   `mo.ui.table`/dataframe previews; the static export is inert.
+
+6. Relay the result:
+   - Each query step's outcome (rows returned) and each chart step's
+     validity — not just "it ran."
+   - Each episode's plan and answer text (from step 1).
+   - Any step that now fails (e.g. a dropped column): say the project
+     still loaded fine, but quote that step's actual error.
+   - The live URL, with the static path as a fallback if opening it
+     failed.
+   - `overall: ok` or `overall: partial` (list what failed).
+   - If pairing failed (step 2), say so plainly and that nothing was
+     re-run.
+
+7. Treat this project as the active one for the rest of the
+   conversation — a plain follow-up afterward is an implicit
+   continuation, same as `/caddie-ask`'s own Continuation behavior: a
+   new episode in this project (pair with its kernel, already
+   established above, and write the new `question_{E}` cell through
+   it), not a new step in an old one.

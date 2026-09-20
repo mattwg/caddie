@@ -27,6 +27,19 @@ The header only includes the dependencies the project's actual
 connector needs, not caddie's full dependency list - see
 `_BUILTIN_CONNECTOR_ONLY_DEPS` below for why that isn't simply "read
 caddie's pyproject.toml as-is."
+
+`data-analyst` pairs with the sandboxed kernel this header builds via
+the `marimo-pair` skill's own `execute-code.sh`, which talks to
+marimo's HTTP API directly (see `notebook/edit.py`) - this needs no
+extra dependency beyond `marimo` itself (code mode shipped in v0.21.1;
+see the version floor in caddie's own `pyproject.toml`).
+
+Caddie's own `marimo` dependency also carries the `[sandbox]` extra
+(for `pyzmq`), but that's only needed by the *shared, directory-level*
+`marimo edit` process `notebook-edit` runs against caddie's own venv
+(see `notebook/edit.py`) - a single per-notebook header never needs it,
+so `_without_sandbox_extra` strips it back off before it reaches a
+notebook's own PEP 723 block.
 """
 
 import tomllib
@@ -80,6 +93,17 @@ def _dependency_name(requirement: str) -> str:
     return requirement.strip()
 
 
+def _without_sandbox_extra(dep: str) -> str:
+    """Strip a `[sandbox]` extra off caddie's own `marimo` requirement
+    before it reaches a per-notebook header - that extra (`pyzmq`) is
+    only needed by the shared, directory-level `marimo edit` process
+    `notebook-edit` runs, never by an individual notebook's own
+    single-file sandbox."""
+    if _dependency_name(dep) == "marimo" and "[sandbox]" in dep:
+        return dep.replace("[sandbox]", "")
+    return dep
+
+
 def _connector_agnostic_dependencies() -> list[str]:
     """caddie's own dependencies, minus every entry that
     `_BUILTIN_CONNECTOR_ONLY_DEPS` attributes to a specific connector -
@@ -89,7 +113,7 @@ def _connector_agnostic_dependencies() -> list[str]:
         name for names in _BUILTIN_CONNECTOR_ONLY_DEPS.values() for name in names
     }
     return [
-        dep
+        _without_sandbox_extra(dep)
         for dep in _caddie_project_metadata()["dependencies"]
         if _dependency_name(dep) not in connector_only
     ]

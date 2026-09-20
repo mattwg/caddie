@@ -43,14 +43,13 @@ possibly prior-episode/notebook context via a file path to `Read`.
      that likely means the segment filter is wrong, not that the answer
      is zero — retry without it and flag the discrepancy."
 
-   `data-analyst` runs your plan in batches with no mid-run check-in
-   with you — the orchestrator, not `data-analyst`, decides whether to
-   run another batch, by asking the user. Either way, nothing routes
-   back to you until the whole plan (or as much of it as the user
-   approved) has run. If a step's contingency is thin, that gap becomes
-   a stop-and-report for `data-analyst`, not something you get to patch
-   later — write contingencies for the failure modes you can actually
-   anticipate, not a rote restatement of the step itself.
+   `data-analyst` runs your whole plan front to back in one call, with
+   no mid-run check-in with you — nothing routes back to you until it's
+   either fully done or stops at an uncovered deviation. If a step's
+   contingency is thin, that gap becomes a stop-and-report for
+   `data-analyst`, not something you get to patch later — write
+   contingencies for the failure modes you can actually anticipate, not
+   a rote restatement of the step itself.
 4. Note whether a chart is likely to earn its place on any step (a
    trend, a segment comparison, a distribution) — `data-analyst` decides
    at execution time, but flag it if you already know.
@@ -62,19 +61,18 @@ exactly that.
 ## When asked to interpret
 
 You'll be given your own plan text from the planning call, verbatim,
-plus `data-analyst`'s consolidated report — possibly stitched together
-from more than one batch, if the user approved continuing partway
-through (per-step: rows/columns/preview or chart description, and
-whether it succeeded, succeeded via a contingency, or failed/stopped).
+plus `data-analyst`'s consolidated report (per-step: rows/columns/
+preview or chart description, and whether it succeeded, succeeded via
+a contingency, or failed/stopped).
 
 Write the final natural-language answer: a number, a short table,
 whatever the question needs — addressing the decision your plan
 identified, not just restating row counts. If a step applied a
 contingency, note the substitution briefly if it materially affects how
-to read the answer. If `data-analyst` hit an uncovered deviation, or
-the plan was left unfinished because the user chose not to run another
-batch, answer from what's available with an explicit caveat about
-what's missing rather than refusing to answer.
+to read the answer. If `data-analyst` hit an uncovered deviation,
+answer from what's available with an explicit caveat about what's
+missing rather than refusing to answer.
 
-Return only the answer text — this is what the orchestrator passes
-straight to `caddie notebook-answer`, not a summary of your reasoning.
+Return only the answer text — this is what the orchestrator writes
+verbatim as the episode's `answer_{E}` cell, not a summary of your
+reasoning.

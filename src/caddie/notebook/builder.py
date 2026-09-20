@@ -1,28 +1,25 @@
-"""Builds and edits Marimo notebooks from `/caddie-ask` episodes.
+"""Creates the one file operation an episode needs before any kernel
+exists: the notebook itself, with its opening `question_{E}` cell.
 
 One `/caddie-ask` question is an "episode": a `question_{E}` markdown
 cell restating the ask, a `plan_{E}` markdown cell stating the
-approach (revisable in place if execution reveals it was wrong), an
-ordered sequence of `description_{E}_{S}` markdown + `code_{E}_{S}`/
-`chart_{E}_{S}` + `output_{E}_{S}` steps sharing one counter, and a
-final `answer_{E}` markdown cell. The description cell states in plain
-language what the step is about to do (e.g. "Querying for Q1 user
-counts:") so the notebook reads as an explained analysis, not a bare
-sequence of queries and results. Episodes accumulate in one project's
-notebook across a conversation's follow-ups, never overwritten - only
-a plan cell is ever edited after the fact, and only in place.
+approach, an ordered sequence of `description_{E}_{S}` markdown +
+`code_{E}_{S}`/`chart_{E}_{S}` + `output_{E}_{S}` steps sharing one
+counter, and a final `answer_{E}` markdown cell. Episodes accumulate in
+one project's notebook across a conversation's follow-ups, never
+overwritten - only a plan cell is ever edited after the fact.
 
-This is the notebook-lifecycle mechanics that requirements.md calls
-"ordinary Caddie-core code" shared by `/caddie-ask` and `/caddie-load`
-- not a script-backed command in the install/update/list sense, since
-what to build/append/revise is decided per call, not a fixed sequence.
+Every one of those cells past `question_{E}` is written by pairing with
+the notebook's live marimo kernel (via the `marimo-pair` skill), not by
+Caddie-core Python - see `.claude/skills/caddie-ask/SKILL.md` and
+`.claude/agents/data-analyst.md` for the cell shapes and the pairing
+sequence, and `.specs/requirements-marimo-pair.md` for why. Only
+`question_{E}` has to happen here, before any kernel exists to attach
+to: this module creates the notebook a kernel would attach to in the
+first place.
 """
 
-import ast
-import re
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from marimo._ast.cell import CellConfig
 from marimo._ast.codegen import generate_filecontents, get_header_comments
@@ -49,62 +46,6 @@ class InvalidNotebookError(Exception):
     def __init__(self, path: Path) -> None:
         super().__init__(f"{path} exists but is not a valid Marimo notebook.")
         self.path = path
-
-
-class EpisodeNotFoundError(Exception):
-    def __init__(self, episode: int, path: Path) -> None:
-        super().__init__(f"No episode {episode} in {path}.")
-        self.episode = episode
-
-
-class PlanRequiredError(Exception):
-    def __init__(self, episode: int) -> None:
-        super().__init__(
-            f"Episode {episode} has no plan yet; call notebook-plan before notebook-step."
-        )
-        self.episode = episode
-
-
-class NoStepsYetError(Exception):
-    def __init__(self, episode: int) -> None:
-        super().__init__(f"Episode {episode} has no steps yet; nothing to answer.")
-        self.episode = episode
-
-
-class AlreadyAnsweredError(Exception):
-    def __init__(self, episode: int) -> None:
-        super().__init__(f"Episode {episode} already has an answer.")
-        self.episode = episode
-
-
-_QUERY_CELL_RE = re.compile(
-    r"^(?:#[^\n]*\n)?query_\d+_\d+\s*=\s*(.+?)\nresult_\d+_\d+\s*=\s*conn\.execute\(query_\d+_\d+\)\s*$",
-    re.DOTALL,
-)
-_MARKDOWN_CELL_RE = re.compile(r"^mo\.md\((.+)\)$", re.DOTALL)
-_QUESTION_NAME_RE = re.compile(r"^question_(\d+)$")
-_PLAN_NAME_RE = re.compile(r"^plan_(\d+)$")
-_DESCRIPTION_NAME_RE = re.compile(r"^description_(\d+)_(\d+)$")
-_STEP_NAME_RE = re.compile(r"^(code|chart)_(\d+)_(\d+)$")
-_ANSWER_NAME_RE = re.compile(r"^answer_(\d+)$")
-
-
-@dataclass(frozen=True)
-class NotebookStep:
-    episode: int
-    step: int
-    kind: Literal["query", "chart"]
-    code: str
-    description: str | None = None
-
-
-@dataclass(frozen=True)
-class NotebookEpisode:
-    index: int
-    question: str
-    plan: str | None
-    steps: list[NotebookStep]
-    answer: str | None
 
 
 def notebook_path(project_dir: Path) -> Path:
@@ -145,225 +86,53 @@ def _write(
     path.write_text(generate_filecontents(codes, names, configs, header_comments=header))
 
 
-def _next_episode_index(names: list[str]) -> int:
-    indices = [int(m.group(1)) for name in names if (m := _QUESTION_NAME_RE.match(name))]
-    return max(indices, default=0) + 1
-
-
-def _next_step_index(names: list[str], episode: int) -> int:
-    pattern = re.compile(rf"^(?:code|chart)_{episode}_(\d+)$")
-    indices = [int(m.group(1)) for name in names if (m := pattern.match(name))]
-    return max(indices, default=0) + 1
-
-
 def start_episode(project_dir: Path, question_markdown: str, connector: str) -> tuple[Path, int]:
-    """Create the project's notebook if needed and start a new episode:
-    writes only its `question_{E}` cell. No plan, no steps yet - those
-    come from `upsert_plan`/`append_step`. Returns (path, episode).
+    """Create a brand-new project's notebook: its `setup` cell (with a
+    PEP 723 header scoped to `connector`) and its first `question_1`
+    cell. Returns (path, 1).
 
-    `connector` only matters for a brand-new notebook, to scope its
-    dependency header to what that connector actually needs (see
-    `notebook/dependencies.py`); an existing notebook keeps whatever
-    header it already has."""
+    This only ever runs once per project, for episode 1 - a project
+    that already has a notebook already has a kernel a follow-up
+    question can pair with, so every later episode's `question_{E}`
+    (and everything else in every episode) is written by pairing with
+    that kernel instead (see `.claude/skills/caddie-ask/SKILL.md`)."""
     project_dir.mkdir(parents=True, exist_ok=True)
     path = notebook_path(project_dir)
-
-    codes, names, configs = _existing_cells(path)
-    if not names:
-        codes, names, configs = [_SETUP_CODE], [SETUP_CELL_NAME], [CellConfig()]
-        header = render_script_header(connector)
-    else:
-        header = get_header_comments(path)
-
-    episode = _next_episode_index(names)
-    codes.append(f"mo.md({question_markdown!r})")
-    names.append(f"question_{episode}")
-    configs.append(CellConfig())
-
-    _write(path, codes, names, configs, header)
-    return path, episode
-
-
-def upsert_plan(project_dir: Path, episode: int, plan_markdown: str) -> None:
-    """Create an episode's plan cell, or overwrite it in place if one
-    already exists - this is how a plan gets revised mid-episode
-    without losing its position (right after the question cell)."""
-    path = notebook_path(project_dir)
-    codes, names, configs = _existing_cells(path)
-    header = get_header_comments(path)
-
-    if f"question_{episode}" not in names:
-        raise EpisodeNotFoundError(episode, path)
-
-    plan_name = f"plan_{episode}"
-    plan_code = f"mo.md({plan_markdown!r})"
-    if plan_name in names:
-        codes[names.index(plan_name)] = plan_code
-    else:
-        insert_at = names.index(f"question_{episode}") + 1
-        codes.insert(insert_at, plan_code)
-        names.insert(insert_at, plan_name)
-        configs.insert(insert_at, CellConfig())
-
-    _write(path, codes, names, configs, header)
-
-
-def append_step(
-    project_dir: Path,
-    episode: int,
-    code: str,
-    kind: Literal["query", "chart"] = "query",
-    description: str | None = None,
-) -> int:
-    """Append the next step (query or chart) plus its output cell to an
-    already-planned episode. Returns the new step number.
-
-    A query step's cell wraps `code` through the connector, same as
-    before. A chart step's cell is `code` verbatim - Claude-authored
-    Python expected to assign a Plotly figure to `chart_{E}_{S}`,
-    referencing an earlier step's `result_{E}_{S}`.
-
-    `description` is plain markdown stating what the step is about to
-    do (e.g. "Querying for Q1 user counts:"). When given, it's written
-    as its own `description_{E}_{S}` markdown cell immediately before
-    the code cell, so the notebook explains itself instead of just
-    showing a query and its output.
-    """
-    path = notebook_path(project_dir)
-    codes, names, configs = _existing_cells(path)
-    header = get_header_comments(path)
-
-    if f"question_{episode}" not in names:
-        raise EpisodeNotFoundError(episode, path)
-    if f"plan_{episode}" not in names:
-        raise PlanRequiredError(episode)
-
-    step = _next_step_index(names, episode)
-    var_prefix = f"{episode}_{step}"
-
-    if kind == "query":
-        cell_name = f"code_{var_prefix}"
-        body = (
-            f"query_{var_prefix} = {_format_query_literal(code)}\n"
-            f"result_{var_prefix} = conn.execute(query_{var_prefix})"
+    if path.is_file():
+        raise FileExistsError(
+            f"{path} already exists - start_episode only creates a project's first episode."
         )
-        output_body = f"result_{var_prefix}"
-    else:
-        cell_name = f"chart_{var_prefix}"
-        body = code
-        output_body = f"chart_{var_prefix}"
 
-    if description:
-        codes.append(f"mo.md({description!r})")
-        names.append(f"description_{var_prefix}")
-        configs.append(CellConfig())
-
-    codes += [body, output_body]
-    names += [cell_name, f"output_{var_prefix}"]
-    configs += [CellConfig(), CellConfig()]
+    header = render_script_header(connector)
+    codes = [_SETUP_CODE, f"mo.md({question_markdown!r})"]
+    names = [SETUP_CELL_NAME, "question_1"]
+    configs = [CellConfig(), CellConfig()]
 
     _write(path, codes, names, configs, header)
-    return step
+    return path, 1
 
 
-def append_answer(project_dir: Path, episode: int, answer_markdown: str) -> None:
-    """Append an episode's final answer cell. Raises if the episode has
-    no steps yet, or already has an answer - one answer per episode."""
+def refresh_header(project_dir: Path, connector: str) -> bool:
+    """Rewrite an existing project's notebook to carry the PEP 723
+    header `start_episode` would write today, leaving every cell
+    untouched. Returns True if the file changed.
+
+    A notebook's header is only ever written once, at `start_episode`
+    - it never gets a second look after that, so a project created
+    before `dependencies.py`'s `caddie @ file://...` fix (or before
+    per-notebook headers existed at all) keeps whatever it was built
+    with forever. That stale header is exactly what leaves `--sandbox`
+    to resolve a bare `caddie==...` (or no `caddie` at all) against
+    PyPI instead of this checkout - silently installing an unrelated,
+    same-named package instead of failing loudly. `notebook-edit`
+    calls this right before opening a session so the sandbox that
+    session's kernel builds is never working from that stale header."""
     path = notebook_path(project_dir)
+    new_header = render_script_header(connector)
+    old_header = get_header_comments(str(path))
+    if old_header is not None and old_header.strip() == new_header.strip():
+        return False
+
     codes, names, configs = _existing_cells(path)
-    header = get_header_comments(path)
-
-    if f"question_{episode}" not in names:
-        raise EpisodeNotFoundError(episode, path)
-
-    step_pattern = re.compile(rf"^(?:code|chart)_{episode}_\d+$")
-    if not any(step_pattern.match(name) for name in names):
-        raise NoStepsYetError(episode)
-    if f"answer_{episode}" in names:
-        raise AlreadyAnsweredError(episode)
-
-    codes.append(f"mo.md({answer_markdown!r})")
-    names.append(f"answer_{episode}")
-    configs.append(CellConfig())
-
-    _write(path, codes, names, configs, header)
-
-
-def existing_episodes(project_dir: Path) -> list[NotebookEpisode]:
-    """Reconstruct every episode already in a project's notebook, in
-    order: its question, current plan (if any), ordered steps (with
-    their original code, not the wrapped cell body), and answer (if
-    any). Used by `/caddie-load`-style re-execution and by chart steps
-    that need to replay an episode's earlier queries."""
-    path = notebook_path(project_dir)
-    codes, names, _ = _existing_cells(path)
-
-    questions: dict[int, str] = {}
-    plans: dict[int, str] = {}
-    descriptions: dict[tuple[int, int], str] = {}
-    steps: dict[int, list[NotebookStep]] = {}
-    answers: dict[int, str] = {}
-
-    for name, cell_code in zip(names, codes):
-        if m := _QUESTION_NAME_RE.match(name):
-            questions[int(m.group(1))] = _extract_markdown(cell_code)
-        elif m := _PLAN_NAME_RE.match(name):
-            plans[int(m.group(1))] = _extract_markdown(cell_code)
-        elif m := _DESCRIPTION_NAME_RE.match(name):
-            episode, step = int(m.group(1)), int(m.group(2))
-            descriptions[(episode, step)] = _extract_markdown(cell_code)
-        elif m := _STEP_NAME_RE.match(name):
-            raw_kind, episode_str, step_str = m.groups()
-            episode, step = int(episode_str), int(step_str)
-            kind: Literal["query", "chart"] = "query" if raw_kind == "code" else "chart"
-            step_code = _extract_query_code(cell_code) if kind == "query" else cell_code
-            steps.setdefault(episode, []).append(
-                NotebookStep(
-                    episode=episode,
-                    step=step,
-                    kind=kind,
-                    code=step_code,
-                    description=descriptions.get((episode, step)),
-                )
-            )
-        elif m := _ANSWER_NAME_RE.match(name):
-            answers[int(m.group(1))] = _extract_markdown(cell_code)
-
-    return [
-        NotebookEpisode(
-            index=episode,
-            question=question,
-            plan=plans.get(episode),
-            steps=sorted(steps.get(episode, []), key=lambda s: s.step),
-            answer=answers.get(episode),
-        )
-        for episode, question in sorted(questions.items())
-    ]
-
-
-def _extract_markdown(cell_code: str) -> str:
-    match = _MARKDOWN_CELL_RE.match(cell_code.strip())
-    if not match:
-        raise InvalidNotebookError(Path("<markdown cell>"))
-    return ast.literal_eval(match.group(1))
-
-
-def _extract_query_code(cell_code: str) -> str:
-    match = _QUERY_CELL_RE.match(cell_code.strip())
-    if not match:
-        raise InvalidNotebookError(Path("<query cell>"))
-    return ast.literal_eval(match.group(1))
-
-
-def _format_query_literal(code: str) -> str:
-    """Render `code` as a Python string literal for a query cell.
-
-    Multi-line queries get a real triple-quoted string, so the notebook
-    reads with actual line breaks instead of a single `\\n`-escaped
-    line. `ast.literal_eval` (used by `_extract_query_code`) parses
-    either form back to the same string.
-    """
-    if "\n" not in code:
-        return repr(code)
-    escaped = code.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
-    return f'"""{escaped}"""'
+    _write(path, codes, names, configs, new_header)
+    return True
