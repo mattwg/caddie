@@ -26,12 +26,22 @@ def install_marimo_pair_skill(caddie_root: Path) -> None:
 
 
 def upgrade_marimo_pair_skill(caddie_root: Path) -> None:
-    """Pull the latest version of the skill, installing it if missing."""
+    """Pull the latest version of the skill, installing it if missing.
+
+    `update`/`upgrade` (aliases of the same subcommand) take installed
+    *skill names* (`marimo-pair`, `retro-marimo-pair`, as `skills list`
+    shows them), not a source spec like `marimo-team/marimo-pair` — the
+    latter silently matches nothing (`No installed skills found
+    matching: ...`, exit 0). `-p -y` scopes to project skills and
+    skips the confirmation prompt without naming skills explicitly, so
+    any other skill later bundled from this same source is covered
+    too, while the unrelated local `caddie-*` skills are left alone.
+    """
     if not (caddie_root / ".claude" / "skills" / "marimo-pair").is_dir():
         install_marimo_pair_skill(caddie_root)
         return
     subprocess.run(
-        [*_SKILLS_INVOCATION, "upgrade", "marimo-team/marimo-pair"],
+        [*_SKILLS_INVOCATION, "update", "-p", "-y"],
         cwd=caddie_root,
         check=True,
     )
