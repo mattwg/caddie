@@ -1,6 +1,9 @@
-"""`caddie install` — tool bootstrap, caddie.default.yaml-seeded
-prompts, caddie.yaml resolution, connector setup, identity, and
-notebooks root.
+"""`caddie install` — tool bootstrap, interactive/flag-driven prompts,
+caddie.yaml resolution, connector setup, identity, and notebooks root.
+
+The org skill repo itself is never scanned for its own defaults file
+(dropped per requirements-plugin.md's "Config yaml content" decision)
+— skill_repo is resolved and used only for loading skills.
 
 Whether or not `~/.caddie/caddie.yaml` already existed, install always
 finishes by running the connector's auth, resolving identity/notebooks
@@ -15,7 +18,6 @@ from caddie.checks import print_summary, run_checks
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config, save_config
 from caddie.config.model import CaddieConfig
 from caddie.connectors.loader import load_connector_from_config
-from caddie.install.defaults import load_defaults
 from caddie.install.identity import resolve_username
 from caddie.install.marimo_pair import install_marimo_pair_skill
 from caddie.install.notebooks import ensure_user_notebooks_dir, resolve_notebooks_root
@@ -70,7 +72,7 @@ def _resolve_fresh(args: argparse.Namespace, config_path: Path) -> CaddieConfig:
     clone_root = config_path.parent / "skill_repo"
     skill_repo_path = resolve_skill_repo(skill_repo, clone_root)
 
-    defaults = load_defaults(skill_repo_path)
+    defaults: dict = {}
 
     skills = (
         [s.strip() for s in args.skills.split(",") if s.strip()]
