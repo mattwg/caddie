@@ -113,7 +113,9 @@ def _resolve_fresh(args: argparse.Namespace, config_path: Path) -> CaddieConfig:
     skill_repo_path = resolve_skill_repo(skill_repo, clone_root)
 
     connector_settings = {
-        key: value for key, value in defaults.items() if key not in ("skill_repo", "skills", "connector")
+        key: value
+        for key, value in defaults.items()
+        if key not in ("skill_repo", "skills", "connector", "caddie_source")
     }
 
     print(f"skill_repo: {skill_repo}")

@@ -149,8 +149,10 @@ Prerequisites: [Claude Code](https://claude.com/claude-code) and
 credentials to authenticate against your org's data backend
 (Databricks OAuth login, currently). Nothing else is required by
 hand; `/caddie:install` checks for `uv` and installs it if it's
-missing, and everything after that (the pinned Python version,
-dependencies, other tooling) is handled by the install process itself.
+missing, installs the `caddie` CLI itself (from your org's config,
+see step 2) if it isn't already on `PATH`, and everything after that
+(the pinned Python version, dependencies, other tooling) is handled
+by the install process itself.
 
 1. Install the `caddie` plugin in Claude Code (via your organization's
    marketplace, once published, or `claude --plugin-dir <path>` while
@@ -167,11 +169,12 @@ dependencies, other tooling) is handled by the install process itself.
    ```
 
    It asks for a config yaml (a local path or URL) — your org's skill
-   repo, which skill(s) to enable, and which data connector to use
-   (e.g. `databricks`). If one is already known or discoverable, those
-   answers are pre-filled and you just confirm them. It then logs you
-   into the connector and sets up your notebooks folder (default
-   `~/caddie/notebooks`).
+   repo, which skill(s) to enable, which data connector to use (e.g.
+   `databricks`), and a `caddie_source` (a git URL) it installs the
+   `caddie` CLI from if it isn't already on `PATH`. If one is already
+   known or discoverable, those answers are pre-filled and you just
+   confirm them. It then logs you into the connector and sets up your
+   notebooks folder (default `~/caddie/notebooks`).
 
 3. Ask a question:
 

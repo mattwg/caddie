@@ -22,10 +22,10 @@ and never spawn another agent — you have no tools for any of that.
 
 ## Invoking the CLI
 
-Every `caddie ...` command assumes `caddie` is already on `PATH`
-(installed separately from this plugin, e.g. via `uv tool install
-caddie`). If a command fails with `command not found`, stop and
-report that rather than guessing at a workaround.
+Every `caddie ...` command assumes `caddie` is already on `PATH`. If a
+command fails with `command not found`, stop and report that the
+orchestrator (or user) needs to run `/caddie:install` first, rather
+than guessing at a workaround.
 
 ## Pairing with the notebook's kernel
 

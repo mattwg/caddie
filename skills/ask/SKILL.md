@@ -46,8 +46,8 @@ These apply to every sub-agent call this skill makes:
 
 Every `caddie ...` command below assumes `caddie` is already on `PATH`
 (installed separately from this plugin, e.g. via `uv tool install
-caddie`). If a command fails with `command not found`, tell the user
-to install `caddie` first rather than guessing at a workaround.
+caddie`). If a command fails with `command not found`, point the user
+at `/caddie:install` rather than guessing at a workaround.
 
 ## Pairing with the notebook's kernel
 

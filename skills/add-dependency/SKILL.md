@@ -18,8 +18,8 @@ dependencies or any other notebook's.
 
 The command below assumes `caddie` is already on `PATH` (installed
 separately from this plugin, e.g. via `uv tool install caddie`). If it
-fails with `command not found`, tell the user to install `caddie`
-first rather than guessing at a workaround.
+fails with `command not found`, point the user at `/caddie:install`
+rather than guessing at a workaround.
 
 ## Steps
 
