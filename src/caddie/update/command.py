@@ -16,8 +16,6 @@ from caddie.install.marimo_pair import upgrade_marimo_pair_skill
 from caddie.install.skill_repo import pull_skill_repo, resolve_skill_repo
 from caddie.install.tooling import upgrade_uv
 
-CADDIE_CORE_ROOT = Path(__file__).resolve().parents[3]
-
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
     parser = subparsers.add_parser(
@@ -40,12 +38,10 @@ def run(args: argparse.Namespace) -> int:
         config.skill_repo_path = str(skill_repo_path)
         pull_skill_repo(skill_repo_path)
 
-    def _sync_dependencies() -> None:
+    def _upgrade_caddie() -> None:
         import subprocess
 
-        if not (CADDIE_CORE_ROOT / "pyproject.toml").is_file():
-            return
-        subprocess.run(["uv", "sync"], cwd=CADDIE_CORE_ROOT, check=True)
+        subprocess.run(["uv", "tool", "upgrade", "caddie"], check=True)
 
     def _verify_connector_auth() -> None:
         connector = load_connector_from_config(config)
@@ -58,12 +54,9 @@ def run(args: argparse.Namespace) -> int:
     results = run_checks(
         [
             ("uv up to date", upgrade_uv),
-            (
-                "marimo-pair skill up to date",
-                lambda: upgrade_marimo_pair_skill(CADDIE_CORE_ROOT),
-            ),
+            ("marimo-pair skill up to date", upgrade_marimo_pair_skill),
             ("skill repo up to date", _refresh_skill_repo),
-            ("python dependencies synced", _sync_dependencies),
+            ("caddie itself up to date", _upgrade_caddie),
             ("connector auth valid", _verify_connector_auth),
         ]
     )
