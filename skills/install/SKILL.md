@@ -18,17 +18,12 @@ given. Always call it with every value already known passed as a flag.
 
 ## Invoking the CLI
 
-Every `caddie ...` command below assumes `caddie` is on `PATH`. If the
-working directory is a checkout of the Caddie project itself (look for
-a `pyproject.toml` with `name = "caddie"` at or above the working
-directory), the `caddie` entry point only exists inside that project's
-own virtualenv — running it bare will fail with `command not found`.
-In that case, prefix every `caddie` command below with `uv run`, e.g.
-`uv run caddie install` (`uv run` also handles syncing dependencies
-the first time, so no separate sync step is needed). Check for this
-once at the start rather than discovering it after a failed call.
+Every `caddie ...` command below assumes `caddie` is already on `PATH`
+(installed separately from this plugin, e.g. via `uv tool install
+caddie`). If a command fails with `command not found`, tell the user
+to install `caddie` first rather than guessing at a workaround.
 
-`uv run` itself needs `uv` installed. Check with `uv --version`; if
+`caddie` itself needs `uv` installed. Check with `uv --version`; if
 that fails, install it with:
 
 ```

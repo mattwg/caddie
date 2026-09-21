@@ -16,13 +16,10 @@ dependencies or any other notebook's.
 
 ## Invoking the CLI
 
-The command below assumes `caddie` is on `PATH`. If the working
-directory is a checkout of the Caddie project itself (look for a
-`pyproject.toml` with `name = "caddie"` at or above the working
-directory), the `caddie` entry point only exists inside that project's
-own virtualenv — prefix with `uv run`, e.g. `uv run caddie
-notebook-add-dependency ...`. Check for this once rather than
-discovering it after a failed call.
+The command below assumes `caddie` is already on `PATH` (installed
+separately from this plugin, e.g. via `uv tool install caddie`). If it
+fails with `command not found`, tell the user to install `caddie`
+first rather than guessing at a workaround.
 
 ## Steps
 
