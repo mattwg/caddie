@@ -1,6 +1,6 @@
 ---
 name: share
-description: Generate a standalone copy of a Caddie analysis project's notebook (notebook.portable.py) with no dependency on the caddie package itself, for handing to someone who doesn't have caddie installed. Trigger on "/caddie:share <project>", or when a user asks to share, hand off, or send a notebook to a colleague/teammate who doesn't use Caddie.
+description: Generate a standalone copy of a Caddie analysis project's notebook (notebook.portable.py) with no dependency on the caddie package itself, for handing to someone who doesn't have caddie installed. Trigger on /caddie:share followed by a project name, or when a user asks to share, hand off, or send a notebook to a colleague/teammate who doesn't use Caddie.
 ---
 
 # /caddie:share <project>

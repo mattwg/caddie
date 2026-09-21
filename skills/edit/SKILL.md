@@ -1,6 +1,6 @@
 ---
 name: edit
-description: Open an existing Caddie analysis project in a live marimo edit server — reuses an already-running server for that notebook instead of starting a duplicate, and opens it in marimo's read-only "Present" app view by default (code hidden, outputs and data tables fully interactive, since a live kernel is behind it). Trigger on "/caddie:edit <project>", or when a user asks to edit, tweak, or interact with a notebook that /caddie:ask or /caddie:load already produced (the rendered HTML those hand back is static and can't render live data previews).
+description: Open an existing Caddie analysis project in a live marimo edit server — reuses an already-running server for that notebook instead of starting a duplicate, and opens it in marimo's read-only "Present" app view by default (code hidden, outputs and data tables fully interactive, since a live kernel is behind it). Trigger on /caddie:edit followed by a project name, or when a user asks to edit, tweak, or interact with a notebook that /caddie:ask or /caddie:load already produced (the rendered HTML those hand back is static and can't render live data previews).
 ---
 
 # /caddie:edit <project>

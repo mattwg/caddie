@@ -1,6 +1,6 @@
 ---
 name: add-dependency
-description: Add a Python package to one Caddie analysis project's notebook, isolated to that notebook's own sandboxed environment rather than caddie's own shared venv. Trigger on "/caddie:add-dependency <project> <package>", or when a user's analysis code (in /caddie:ask or /caddie:edit) needs a package that isn't already available and they ask how to install it.
+description: Add a Python package to one Caddie analysis project's notebook, isolated to that notebook's own sandboxed environment rather than caddie's own shared venv. Trigger on /caddie:add-dependency followed by a project name and package, or when a user's analysis code (in /caddie:ask or /caddie:edit) needs a package that isn't already available and they ask how to install it.
 ---
 
 # /caddie:add-dependency <project> <package>

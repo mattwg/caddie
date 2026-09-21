@@ -1,6 +1,6 @@
 ---
 name: ask
-description: The enforced entry point for data analysis with Caddie — never answer a data question with just an inline chat result or a single query. Clarifies the question, gets a plan from lead-analyst, hands the whole plan to data-analyst to execute front to back in one call against the active connector, gets the final answer back from lead-analyst, and hands back a live, click-to-open notebook (via /caddie:edit) with working data previews, not just a static export. Trigger on "/caddie:ask <question>", and also treat a plain follow-up data question later in the same conversation as an implicit continuation of the active project (see Continuation below).
+description: The enforced entry point for data analysis with Caddie — never answer a data question with just an inline chat result or a single query. Clarifies the question, gets a plan from lead-analyst, hands the whole plan to data-analyst to execute front to back in one call against the active connector, gets the final answer back from lead-analyst, and hands back a live, click-to-open notebook (via /caddie:edit) with working data previews, not just a static export. Trigger on /caddie:ask followed by a question, and also treat a plain follow-up data question later in the same conversation as an implicit continuation of the active project (see Continuation below).
 ---
 
 # /caddie:ask "<question>"

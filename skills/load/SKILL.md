@@ -1,6 +1,6 @@
 ---
 name: load
-description: Bring an existing Caddie analysis project back into context in any conversation, including one that never ran /caddie:ask for it — loads its episodes (question, plan, steps, answer), re-executes every step live against the project's kernel so the notebook's stored results are genuinely current, and hands back a live, click-to-open notebook. Trigger on "/caddie:load <project>".
+description: Bring an existing Caddie analysis project back into context in any conversation, including one that never ran /caddie:ask for it — loads its episodes (question, plan, steps, answer), re-executes every step live against the project's kernel so the notebook's stored results are genuinely current, and hands back a live, click-to-open notebook. Trigger on /caddie:load followed by a project name.
 ---
 
 # /caddie:load <project>
