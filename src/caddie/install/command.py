@@ -19,9 +19,8 @@ from caddie.checks import print_summary, run_checks
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config, save_config
 from caddie.config.model import CaddieConfig
 from caddie.connectors.loader import load_connector_from_config
-from caddie.install.identity import resolve_username
 from caddie.install.marimo_pair import install_marimo_pair_skill
-from caddie.install.notebooks import ensure_user_notebooks_dir, resolve_notebooks_root
+from caddie.install.notebooks import ensure_notebooks_dir, resolve_notebooks_root
 from caddie.install.org_config import OrgConfigError, load_org_config
 from caddie.install.skill_repo import resolve_skill_repo
 from caddie.install.tooling import ensure_uv_installed
@@ -142,14 +141,12 @@ def _finish_install(
     existed, since these steps are what a plain re-run of `caddie
     install` is expected to (re)verify.
     """
-    username = config.username or resolve_username()
     notebooks_root = Path(args.notebooks_root).expanduser() if args.notebooks_root else (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
 
-    config.username = username
     config.notebooks_root = str(notebooks_root)
 
     connector_holder: dict[str, object] = {}
@@ -169,10 +166,7 @@ def _finish_install(
         [
             ("uv installed", ensure_uv_installed),
             ("marimo-pair skill installed", install_marimo_pair_skill),
-            (
-                "notebooks root ready",
-                lambda: ensure_user_notebooks_dir(notebooks_root, username),
-            ),
+            ("notebooks root ready", lambda: ensure_notebooks_dir(notebooks_root)),
             ("connector authenticated", _authenticate),
             ("connector live query", _live_query),
         ]

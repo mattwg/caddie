@@ -10,8 +10,7 @@ import argparse
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.identity import resolve_username
-from caddie.install.notebooks import ensure_user_notebooks_dir, resolve_notebooks_root
+from caddie.install.notebooks import ensure_notebooks_dir, resolve_notebooks_root
 from caddie.notebook.builder import start_episode
 from caddie.notebook.slug import slugify, unique_slug
 from caddie.notebook.state import ProjectState, save_state
@@ -34,17 +33,18 @@ def run(args: argparse.Namespace) -> int:
     config_path = Path(args.config_path) if args.config_path else DEFAULT_CONFIG_PATH
     config = load_config(config_path)
 
-    username = config.username or resolve_username()
     notebooks_root = (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    user_dir = ensure_user_notebooks_dir(notebooks_root, username)
+    notebooks_dir = ensure_notebooks_dir(notebooks_root)
 
-    existing = {p.name for p in user_dir.iterdir() if p.is_dir()} if user_dir.is_dir() else set()
+    existing = (
+        {p.name for p in notebooks_dir.iterdir() if p.is_dir()} if notebooks_dir.is_dir() else set()
+    )
     project_slug = unique_slug(slugify(args.question), existing)
-    project_dir = user_dir / project_slug
+    project_dir = notebooks_dir / project_slug
 
     question_markdown = f"**Question:** {args.question}"
     path, episode = start_episode(project_dir, question_markdown, config.connector)

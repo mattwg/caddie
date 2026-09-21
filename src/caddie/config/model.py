@@ -11,5 +11,4 @@ class CaddieConfig:
     context: str | None = None
     notebooks_root: str | None = None
     skill_repo_path: str | None = None
-    username: str | None = None
     config_source: str | None = None
