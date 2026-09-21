@@ -129,6 +129,7 @@ def _resolve_fresh(args: argparse.Namespace, config_path: Path) -> CaddieConfig:
         connector=connector,
         connector_settings=connector_settings,
         skill_repo_path=str(skill_repo_path),
+        config_source=args.config,
     )
 
 

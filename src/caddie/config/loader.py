@@ -24,6 +24,7 @@ _KNOWN_KEYS = {
     "notebooks_root",
     "skill_repo_path",
     "username",
+    "config_source",
 }
 _REQUIRED_KEYS = ("skills", "skill_repo", "connector")
 
@@ -79,6 +80,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> CaddieConfig:
         notebooks_root=raw.get("notebooks_root"),
         skill_repo_path=raw.get("skill_repo_path"),
         username=raw.get("username"),
+        config_source=raw.get("config_source"),
     )
 
 
@@ -101,7 +103,7 @@ def save_config(config: CaddieConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
     raw["skill_repo"] = config.skill_repo
     raw["connector"] = config.connector
 
-    for key in ("context", "notebooks_root", "skill_repo_path", "username"):
+    for key in ("context", "notebooks_root", "skill_repo_path", "username", "config_source"):
         value = getattr(config, key)
         if value is not None:
             raw[key] = value
