@@ -7,7 +7,6 @@
     - CLI (uv run caddie...) needs approval in Claude Code 
 
 - notebooks should be organized into year/month/day folder structure
-    - no need for user name in notebooks folder path
     - improve the notebook naming
 
 - sessions should be flagged in the notebook - titles and sections for easier navigation
@@ -18,8 +17,7 @@
 
 - integrate knowledge rag tools - local-rag or others.
 
-
-
+- add made with Caddie in footer.
 
 
 

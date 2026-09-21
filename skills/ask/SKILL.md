@@ -1,11 +1,11 @@
 ---
-name: caddie-ask
-description: The enforced entry point for data analysis with Caddie — never answer a data question with just an inline chat result or a single query. Clarifies the question, gets a plan from lead-analyst, hands the whole plan to data-analyst to execute front to back in one call against the active connector, gets the final answer back from lead-analyst, and hands back a live, click-to-open notebook (via caddie-edit) with working data previews, not just a static export. Trigger on "/caddie-ask <question>", and also treat a plain follow-up data question later in the same conversation as an implicit continuation of the active project (see Continuation below).
+name: ask
+description: The enforced entry point for data analysis with Caddie — never answer a data question with just an inline chat result or a single query. Clarifies the question, gets a plan from lead-analyst, hands the whole plan to data-analyst to execute front to back in one call against the active connector, gets the final answer back from lead-analyst, and hands back a live, click-to-open notebook (via /caddie:edit) with working data previews, not just a static export. Trigger on "/caddie:ask <question>", and also treat a plain follow-up data question later in the same conversation as an implicit continuation of the active project (see Continuation below).
 ---
 
-# /caddie-ask "<question>"
+# /caddie:ask "<question>"
 
-`/caddie-ask` never answers a data question inline, and never stops at
+`/caddie:ask` never answers a data question inline, and never stops at
 one query. It clarifies what's actually being asked, gets a plan from
 the `lead-analyst` sub-agent, hands the whole plan to the
 `data-analyst` sub-agent to execute front to back against the active
@@ -21,10 +21,10 @@ other write to the notebook for the rest of the episode — the plan
 cell, every step (inside `data-analyst`), and the answer cell — goes
 through the one paired kernel this skill starts right after
 `notebook-start`, via the `marimo-pair` skill, the same mechanism
-`data-analyst` uses for steps (`.claude/agents/data-analyst.md`,
+`data-analyst` uses for steps (`agents/data-analyst.md`,
 `.specs/requirements-marimo-pair.md`). Query authoring and execution
 live in `data-analyst`; planning and interpretation live in
-`lead-analyst` (`.claude/agents/lead-analyst.md`).
+`lead-analyst` (`agents/lead-analyst.md`).
 
 ## Spawning rules
 
@@ -81,8 +81,9 @@ continuation):
    this kernel — opening the browser tab does not guarantee its autorun has
    finished before you start issuing `cm` calls. Check its status and run it
    if stale, before creating `question_1`/`plan_1`, or a cell referencing
-   `mo` can fail with `NameError: name 'mo' is not defined` (see
-   [gotchas.md](../marimo-pair/reference/gotchas.md#a-brand-new-notebooks-cells-may-not-have-run-yet)):
+   `mo` can fail with `NameError: name 'mo' is not defined` (see "A
+   brand-new notebook's cells may not have run yet" in
+   `.claude/skills/marimo-pair/reference/gotchas.md`):
    ```
    bash <skill-dir>/scripts/execute-code.sh --url <url> --file <file> \
      -c "import marimo._code_mode as cm; print(cm.get_context().cells['setup'].status)"
@@ -143,7 +144,7 @@ a step cell itself.
 ## Orchestration
 
 1. Read `~/.caddie/caddie.yaml`. If it doesn't exist, tell the user to
-   run `/caddie-install` first and stop here.
+   run `/caddie:install` first and stop here.
 
 2. Determine the target project (see Continuation below). Keep track
    of the active project's slug and episode number for the rest of the
@@ -227,8 +228,8 @@ a step cell itself.
    notebook, not this static export.
 
 9. Open the notebook live rather than the static export: invoke the
-   `caddie-edit` skill for this project (same as a user typing
-   `/caddie-edit <slug>` themselves) — it finds the same shared server
+   `edit` skill (/caddie:edit) for this project (same as a user typing
+   `/caddie:edit <slug>` themselves) — it finds the same shared server
    this episode has already been pairing against and opens it landed on
    marimo's "Present" view (`?file=<file>&view-as=present`). This
    matters, not just style: the static HTML from step 8 has no running
@@ -247,7 +248,7 @@ a step cell itself.
       address the question that was asked and support the decision
       being made.
     - A one-line note that the notebook opened live in their browser
-      (via `caddie-edit`), plus its URL as plain text as a fallback in
+      (via `/caddie:edit`), plus its URL as plain text as a fallback in
       case the open failed. Mention the static rendered path from step
       8 only as a secondary fallback (e.g. if the live server couldn't
       start) — it's not the primary artifact anymore, since it can't
@@ -268,11 +269,11 @@ already starts a new episode under Caddie's existing continuation model
 
 A follow-up data question later in the same conversation is an
 implicit continuation of the active project — it is never answered as
-plain chat, and the user never needs to retype `/caddie-ask`. A
+plain chat, and the user never needs to retype `/caddie:ask`. A
 continuation starts a *new episode* in the same project (step 5b: pair
 with that project's kernel, then write the new `question_{E}` cell
 through it), not a new step in the old episode — steps belong to one
-line of inquiry within a single `/caddie-ask` turn.
+line of inquiry within a single `/caddie:ask` turn.
 Judging whether something is a continuation at all is a judgment call,
 not a fixed trigger:
 

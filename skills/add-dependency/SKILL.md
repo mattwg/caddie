@@ -1,13 +1,13 @@
 ---
-name: caddie-add-dependency
-description: Add a Python package to one Caddie analysis project's notebook, isolated to that notebook's own sandboxed environment rather than caddie's own shared venv. Trigger on "/caddie-add-dependency <project> <package>", or when a user's analysis code (in /caddie-ask or /caddie-edit) needs a package that isn't already available and they ask how to install it.
+name: add-dependency
+description: Add a Python package to one Caddie analysis project's notebook, isolated to that notebook's own sandboxed environment rather than caddie's own shared venv. Trigger on "/caddie:add-dependency <project> <package>", or when a user's analysis code (in /caddie:ask or /caddie:edit) needs a package that isn't already available and they ask how to install it.
 ---
 
-# /caddie-add-dependency <project> <package>
+# /caddie:add-dependency <project> <package>
 
 Every generated notebook carries its own PEP 723 `# /// script`
 dependency header (written by `caddie.notebook.dependencies`, read by
-`marimo edit --sandbox` — see `/caddie-edit`). This skill adds a
+`marimo edit --sandbox` — see `/caddie:edit`). This skill adds a
 package to that header for one project's notebook, without touching
 caddie's own `pyproject.toml` or shared `.venv` — so a heavy or
 conflicting package one notebook needs (e.g. `scikit-learn`,
@@ -27,9 +27,9 @@ discovering it after a failed call.
 ## Steps
 
 1. Resolve the project slug — the argument given, or the active
-   project from earlier in the conversation (`/caddie-ask` or
-   `/caddie-load`) if none was given. If neither is available, ask the
-   user which project, or point them at `/caddie-list`.
+   project from earlier in the conversation (`/caddie:ask` or
+   `/caddie:load`) if none was given. If neither is available, ask the
+   user which project, or point them at `/caddie:list`.
 
 2. Run:
 
@@ -44,8 +44,8 @@ discovering it after a failed call.
 
 3. Relay the `added:` / `notebook:` lines to the user, and tell them
    the package takes effect the next time that notebook's live editor
-   is (re)opened with `/caddie-edit` — not retroactively in an editor
-   session already running, and not in `/caddie-ask`'s own guided
+   is (re)opened with `/caddie:edit` — not retroactively in an editor
+   session already running, and not in `/caddie:ask`'s own guided
    execution (that runs in-process against caddie's shared venv, since
    it has to share a live connector session; it's limited to whatever
    caddie itself already has installed).
@@ -53,10 +53,10 @@ discovering it after a failed call.
 ## If the command fails
 
 - `No project '<slug>' under ...`: the project doesn't exist yet under
-  that name — check `/caddie-list`, or confirm the notebook has been
-  started with `/caddie-ask` at least once.
+  that name — check `/caddie:list`, or confirm the notebook has been
+  started with `/caddie:ask` at least once.
 - `uv is required ...`: `uv` isn't on `PATH` in this environment; point
-  the user at `/caddie-install` or `/caddie-update`.
+  the user at `/caddie:install` or `/caddie:update`.
 - Any other failure is `uv add`'s own stderr (e.g. the package name
   doesn't resolve on the configured index) — relay it verbatim rather
   than guessing at a fix.

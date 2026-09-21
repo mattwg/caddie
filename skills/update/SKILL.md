@@ -1,9 +1,9 @@
 ---
-name: caddie-update
-description: Idempotent refresh of an existing Caddie setup — re-checks tooling, re-reads caddie.yaml for edits (skill/connector/skill_repo changes), pulls the skill repo, re-syncs Python dependencies, and re-authenticates the connector only if its auth has gone stale. Trigger on "/caddie-update".
+name: update
+description: Idempotent refresh of an existing Caddie setup — re-checks tooling, re-reads caddie.yaml for edits (skill/connector/skill_repo changes), pulls the skill repo, re-syncs Python dependencies, and re-authenticates the connector only if its auth has gone stale. Trigger on "/caddie:update".
 ---
 
-# /caddie-update
+# /caddie:update
 
 This skill never runs shell or install commands itself — it only
 invokes the `caddie update` CLI (implemented in Caddie core) and

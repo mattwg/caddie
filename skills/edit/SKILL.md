@@ -1,11 +1,11 @@
 ---
-name: caddie-edit
-description: Open an existing Caddie analysis project in a live marimo edit server — reuses an already-running server for that notebook instead of starting a duplicate, and opens it in marimo's read-only "Present" app view by default (code hidden, outputs and data tables fully interactive, since a live kernel is behind it). Trigger on "/caddie-edit <project>", or when a user asks to edit, tweak, or interact with a notebook that /caddie-ask or /caddie-load already produced (the rendered HTML those hand back is static and can't render live data previews).
+name: edit
+description: Open an existing Caddie analysis project in a live marimo edit server — reuses an already-running server for that notebook instead of starting a duplicate, and opens it in marimo's read-only "Present" app view by default (code hidden, outputs and data tables fully interactive, since a live kernel is behind it). Trigger on "/caddie:edit <project>", or when a user asks to edit, tweak, or interact with a notebook that /caddie:ask or /caddie:load already produced (the rendered HTML those hand back is static and can't render live data previews).
 ---
 
-# /caddie-edit <project>
+# /caddie:edit <project>
 
-`/caddie-ask` and `/caddie-load` hand back a rendered, static HTML
+`/caddie:ask` and `/caddie:load` hand back a rendered, static HTML
 export by default — enough to read the answer, but it's a one-shot
 export with no running kernel behind it, so a `mo.ui.table`/dataframe
 output degrades to an inert "Preview data" button that can't actually
@@ -27,7 +27,7 @@ while `uv` resolves and installs that environment; later launches (for
 any project) reuse `uv`'s cache and are fast, and opening a second
 project only opens that notebook inside the same already-running
 server rather than starting another one. If a notebook needs a package
-beyond caddie's own baseline, that's `/caddie-add-dependency`, not
+beyond caddie's own baseline, that's `/caddie:add-dependency`, not
 editing caddie's own `pyproject.toml`.
 
 ## Invoking the CLI
@@ -44,9 +44,9 @@ discovering it after a failed call.
 ## Steps
 
 1. Resolve the project slug — the argument given, or the active
-   project from earlier in the conversation (`/caddie-ask` or
-   `/caddie-load`) if none was given. If neither is available, ask the
-   user which project, or point them at `/caddie-list`.
+   project from earlier in the conversation (`/caddie:ask` or
+   `/caddie:load`) if none was given. If neither is available, ask the
+   user which project, or point them at `/caddie:list`.
 
 2. Run:
 
