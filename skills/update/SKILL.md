@@ -35,6 +35,13 @@ rather than guessing at a workaround.
    step) — let the user know to expect that rather than treating it as
    an unexpected prompt.
 
-3. Relay the script's pass/fail summary to the user verbatim. Existing
-   notebooks are never touched by this command; if a step fails, tell
-   the user which one and show the error it printed.
+3. Relay the script's pass/fail summary to the user verbatim — do not
+   paraphrase, embellish, or attach detail (e.g. a commit hash) that
+   the script itself didn't print. Two distinct repos are in play here
+   and must never be conflated: the org's `skill_repo` (the skills
+   content, checked by the "skill repo up to date" step) and `caddie`
+   core itself (the CLI, checked by the "caddie itself up to date"
+   step via `uv tool upgrade caddie`). Attributing one repo's state or
+   commit to the other's step is wrong even if both happen to pass.
+   Existing notebooks are never touched by this command; if a step
+   fails, tell the user which one and show the error it printed.
