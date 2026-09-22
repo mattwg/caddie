@@ -1,9 +1,9 @@
 ---
-name: caddie-update
-description: Idempotent refresh of an existing Caddie setup — re-checks tooling, re-reads caddie.yaml for edits (skill/connector/skill_repo changes), pulls the skill repo, re-syncs Python dependencies, and re-authenticates the connector only if its auth has gone stale. Trigger on "/caddie-update".
+name: update
+description: Idempotent refresh of an existing Caddie setup — re-checks tooling, re-reads caddie.yaml for edits (skill/connector/skill_repo changes), pulls the skill repo, re-syncs Python dependencies, and re-authenticates the connector only if its auth has gone stale. Trigger on "/caddie:update".
 ---
 
-# /caddie-update
+# /caddie:update
 
 This skill never runs shell or install commands itself — it only
 invokes the `caddie update` CLI (implemented in Caddie core) and
@@ -13,14 +13,10 @@ script, not here.
 
 ## Invoking the CLI
 
-The command below assumes `caddie` is on `PATH`. If the working
-directory is a checkout of the Caddie project itself (look for a
-`pyproject.toml` with `name = "caddie"` at or above the working
-directory), the `caddie` entry point only exists inside that project's
-own virtualenv — running it bare will fail with `command not found`.
-In that case, prefix it with `uv run`, e.g. `uv run caddie update`.
-Check for this once at the start rather than discovering it after a
-failed call.
+The command below assumes `caddie` is already on `PATH` (installed
+separately from this plugin, e.g. via `uv tool install caddie`). If it
+fails with `command not found`, point the user at `/caddie:install`
+rather than guessing at a workaround.
 
 ## Steps
 

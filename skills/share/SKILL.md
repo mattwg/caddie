@@ -1,9 +1,9 @@
 ---
-name: caddie-share
-description: Generate a standalone copy of a Caddie analysis project's notebook (notebook.portable.py) with no dependency on the caddie package itself, for handing to someone who doesn't have caddie installed. Trigger on "/caddie-share <project>", or when a user asks to share, hand off, or send a notebook to a colleague/teammate who doesn't use Caddie.
+name: share
+description: Generate a standalone copy of a Caddie analysis project's notebook (notebook.portable.py) with no dependency on the caddie package itself, for handing to someone who doesn't have caddie installed. Trigger on /caddie:share followed by a project name, or when a user asks to share, hand off, or send a notebook to a colleague/teammate who doesn't use Caddie.
 ---
 
-# /caddie-share <project>
+# /caddie:share <project>
 
 The working notebook (`notebook.py`) always depends on `caddie` itself
 — its `setup` cell loads `~/.caddie/caddie.yaml` and resolves the
@@ -22,20 +22,17 @@ it and relay the result.
 
 ## Invoking the CLI
 
-The command below assumes `caddie` is on `PATH`. If the working
-directory is a checkout of the Caddie project itself (look for a
-`pyproject.toml` with `name = "caddie"` at or above the working
-directory), the `caddie` entry point only exists inside that project's
-own virtualenv — prefix with `uv run`, e.g. `uv run caddie
-notebook-share ...`. Check for this once rather than discovering it
-after a failed call.
+The command below assumes `caddie` is already on `PATH` (installed
+separately from this plugin, e.g. via `uv tool install caddie`). If it
+fails with `command not found`, point the user at `/caddie:install`
+rather than guessing at a workaround.
 
 ## Steps
 
 1. Resolve the project slug — the argument given, or the active
-   project from earlier in the conversation (`/caddie-ask` or
-   `/caddie-load`) if none was given. If neither is available, ask the
-   user which project, or point them at `/caddie-list`.
+   project from earlier in the conversation (`/caddie:ask` or
+   `/caddie:load`) if none was given. If neither is available, ask the
+   user which project, or point them at `/caddie:list`.
 
 2. Run:
 
@@ -54,16 +51,16 @@ after a failed call.
      notebook doesn't share credentials or a connection.
    - It's a **snapshot**, not a live link to the working notebook. If
      the connector or shared charting template changes later, or the
-     project's connector settings change, re-run `/caddie-share` to
+     project's connector settings change, re-run `/caddie:share` to
      refresh it — it won't happen automatically.
 
 ## If the command fails
 
 - `No project '<slug>' under ...`: the project doesn't exist yet under
-  that name — check `/caddie-list`.
+  that name — check `/caddie:list`.
 - `No project state at ...; run notebook-start before notebook-share.`:
   the project has no `notebook.py` yet, or its state file is missing —
-  point the user at `/caddie-ask` to create it first.
+  point the user at `/caddie:ask` to create it first.
 - Any other failure is the underlying error from resolving the
   project's connector or reading its source — relay it verbatim rather
   than guessing at a fix.

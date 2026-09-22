@@ -8,8 +8,8 @@ interact with the notebook (rerun a cell, tweak a query by hand) needs
 marimo's live editor instead.
 
 One shared server per user, not one per project: `start_server` points
-`marimo edit` at the user's whole `<notebooks_root>/<username>/`
-directory rather than a single project's `notebook.py`. Pointing
+`marimo edit` at the whole `<notebooks_root>` directory rather than a
+single project's `notebook.py`. Pointing
 `marimo edit` at a directory with `--sandbox` puts it in marimo's own
 "multi-file sandbox" mode (`marimo._cli.sandbox.SandboxMode.MULTI`),
 which still resolves each notebook's own PEP 723 header into its own
@@ -62,7 +62,6 @@ import webbrowser
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.identity import resolve_username
 from caddie.install.notebooks import resolve_notebooks_root
 from caddie.notebook.builder import notebook_path, refresh_header
 
@@ -104,20 +103,18 @@ def run(args: argparse.Namespace) -> int:
     config_path = Path(args.config_path) if args.config_path else DEFAULT_CONFIG_PATH
     config = load_config(config_path)
 
-    username = config.username or resolve_username()
     notebooks_root = (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    user_dir = notebooks_root / username
-    project_dir = user_dir / args.project
+    project_dir = notebooks_root / args.project
     nb_path = notebook_path(project_dir)
 
     if not nb_path.is_file():
-        raise SystemExit(f"No project '{args.project}' under {user_dir}.")
+        raise SystemExit(f"No project '{args.project}' under {notebooks_root}.")
 
-    existing = find_running_server(user_dir)
+    existing = find_running_server(notebooks_root)
     if existing is not None:
         print("status: already-running")
         print(f"url: {existing.url}")
@@ -130,7 +127,7 @@ def run(args: argparse.Namespace) -> int:
         url = existing.url
     else:
         try:
-            url = start_server(user_dir)
+            url = start_server(notebooks_root)
         except EditServerError as exc:
             raise SystemExit(str(exc))
 
@@ -170,9 +167,9 @@ class RunningServer:
         self.reachable = reachable
 
 
-def find_running_server(user_dir: Path) -> RunningServer | None:
+def find_running_server(notebooks_root: Path) -> RunningServer | None:
     result = subprocess.run(["ps", "-eo", "pid,command"], capture_output=True, text=True)
-    target = str(user_dir)
+    target = str(notebooks_root)
     for line in result.stdout.splitlines():
         if "marimo edit" not in line or target not in line:
             continue
@@ -241,8 +238,8 @@ def ensure_session(url: str, nb_path: Path) -> bool:
     return False
 
 
-def start_server(user_dir: Path) -> str:
-    log_path = user_dir / ".marimo_edit.log"
+def start_server(notebooks_root: Path) -> str:
+    log_path = notebooks_root / ".marimo_edit.log"
     log_fh = open(log_path, "w")
     try:
         subprocess.Popen(
@@ -251,7 +248,7 @@ def start_server(user_dir: Path) -> str:
                 "-m",
                 "marimo",
                 "edit",
-                str(user_dir),
+                str(notebooks_root),
                 "--headless",
                 "--no-token",
                 "--sandbox",

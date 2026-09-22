@@ -1,0 +1,5 @@
+{
+  "name": "caddie",
+  "description": "Pair with a live marimo kernel to run a full data-analysis episode against your org's connector, and hand back a click-to-open notebook.",
+  "version": "0.0.1"
+}

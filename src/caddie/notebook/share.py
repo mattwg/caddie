@@ -8,7 +8,6 @@ import argparse
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.identity import resolve_username
 from caddie.install.notebooks import resolve_notebooks_root
 from caddie.notebook.portable import render_portable_notebook
 
@@ -30,15 +29,14 @@ def run(args: argparse.Namespace) -> int:
     config_path = Path(args.config_path) if args.config_path else DEFAULT_CONFIG_PATH
     config = load_config(config_path)
 
-    username = config.username or resolve_username()
     notebooks_root = (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    project_dir = notebooks_root / username / args.project
+    project_dir = notebooks_root / args.project
     if not project_dir.is_dir():
-        raise SystemExit(f"No project '{args.project}' under {notebooks_root / username}.")
+        raise SystemExit(f"No project '{args.project}' under {notebooks_root}.")
 
     try:
         out_path = render_portable_notebook(project_dir)

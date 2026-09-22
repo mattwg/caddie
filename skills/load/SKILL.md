@@ -1,38 +1,34 @@
 ---
-name: caddie-load
-description: Bring an existing Caddie analysis project back into context in any conversation, including one that never ran /caddie-ask for it — loads its episodes (question, plan, steps, answer), re-executes every step live against the project's kernel so the notebook's stored results are genuinely current, and hands back a live, click-to-open notebook. Trigger on "/caddie-load <project>".
+name: load
+description: Bring an existing Caddie analysis project back into context in any conversation, including one that never ran /caddie:ask for it — loads its episodes (question, plan, steps, answer), re-executes every step live against the project's kernel so the notebook's stored results are genuinely current, and hands back a live, click-to-open notebook. Trigger on /caddie:load followed by a project name.
 ---
 
-# /caddie-load <project>
+# /caddie:load <project>
 
 Re-establishes an existing project as the active analysis, so a plain
 follow-up question afterward behaves exactly like an implicit
-`/caddie-ask` continuation (see that skill's Continuation section) —
-the user never needs to retype `/caddie-ask` after loading.
+`/caddie:ask` continuation (see that skill's Continuation section) —
+the user never needs to retype `/caddie:ask` after loading.
 
 Re-execution pairs with the project's live kernel (via the
-`marimo-pair` skill), the same mechanism `/caddie-ask` and
+`marimo-pair` skill), the same mechanism `/caddie:ask` and
 `data-analyst` use, so a reloaded notebook shows genuinely current
 results rather than a stale snapshot.
 
 ## Invoking the CLI
 
-The command below assumes `caddie` is on `PATH`. If the working
-directory is a checkout of the Caddie project itself (look for a
-`pyproject.toml` with `name = "caddie"` at or above the working
-directory), the `caddie` entry point only exists inside that project's
-own virtualenv — running it bare will fail with `command not found`.
-In that case, prefix it with `uv run`, e.g. `uv run caddie
-notebook-edit ...`. Check for this once at the start rather than
-discovering it after a failed call.
+The command below assumes `caddie` is already on `PATH` (installed
+separately from this plugin, e.g. via `uv tool install caddie`). If it
+fails with `command not found`, point the user at `/caddie:install`
+rather than guessing at a workaround.
 
 ## Steps
 
-1. Read the notebook file directly (`~/caddie/notebooks/<username>/
-   <project>/notebook.py`, or the configured `notebooks_root` if
-   overridden) so its episodes — question, plan, steps, answer — are
-   in context. If it doesn't exist, tell the user and suggest
-   `/caddie-list` to find the right slug.
+1. Read the notebook file directly (`~/caddie/notebooks/<project>/
+   notebook.py`, or the configured `notebooks_root` if overridden) so
+   its episodes — question, plan, steps, answer — are in context. If
+   it doesn't exist, tell the user and suggest `/caddie:list` to find
+   the right slug.
 
 2. Pair with the project's kernel:
 
@@ -61,7 +57,7 @@ discovering it after a failed call.
 4. Render the static export too: `caddie notebook-render --project
    <project>`. Keep its path as a fallback for step 5.
 
-5. Open the notebook live: invoke the `caddie-edit` skill for this
+5. Open the notebook live: invoke the `edit` skill (/caddie:edit) for this
    project. This matters, not just style — only the live server shows
    the freshly re-run results from step 3 with working
    `mo.ui.table`/dataframe previews; the static export is inert.
@@ -80,7 +76,7 @@ discovering it after a failed call.
 
 7. Treat this project as the active one for the rest of the
    conversation — a plain follow-up afterward is an implicit
-   continuation, same as `/caddie-ask`'s own Continuation behavior: a
+   continuation, same as `/caddie:ask`'s own Continuation behavior: a
    new episode in this project (pair with its kernel, already
    established above, and write the new `question_{E}` cell through
    it), not a new step in an old one.

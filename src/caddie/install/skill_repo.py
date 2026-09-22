@@ -1,5 +1,5 @@
 """Resolves the org skill repo (a git URL or an already-local path) to a
-local directory Caddie can read skills and caddie.default.yaml from."""
+local directory Caddie can read skills from."""
 
 import subprocess
 from pathlib import Path

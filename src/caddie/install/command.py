@@ -1,6 +1,10 @@
-"""`caddie install` — tool bootstrap, caddie.default.yaml-seeded
-prompts, caddie.yaml resolution, connector setup, identity, and
-notebooks root.
+"""`caddie install` — tool bootstrap, config-yaml/flag-driven resolution
+of skill_repo/skills/connector, caddie.yaml resolution, connector
+setup, identity, and notebooks root.
+
+The org skill repo itself is never scanned for its own defaults file
+(dropped per requirements-plugin.md's "Config yaml content" decision)
+— skill_repo is resolved and used only for loading skills.
 
 Whether or not `~/.caddie/caddie.yaml` already existed, install always
 finishes by running the connector's auth, resolving identity/notebooks
@@ -15,20 +19,21 @@ from caddie.checks import print_summary, run_checks
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config, save_config
 from caddie.config.model import CaddieConfig
 from caddie.connectors.loader import load_connector_from_config
-from caddie.install.defaults import load_defaults
-from caddie.install.identity import resolve_username
 from caddie.install.marimo_pair import install_marimo_pair_skill
-from caddie.install.notebooks import ensure_user_notebooks_dir, resolve_notebooks_root
-from caddie.install.prompts import prompt_list, prompt_value
+from caddie.install.notebooks import ensure_notebooks_dir, resolve_notebooks_root
+from caddie.install.org_config import OrgConfigError, load_org_config
 from caddie.install.skill_repo import resolve_skill_repo
 from caddie.install.tooling import ensure_uv_installed
-
-CADDIE_CORE_ROOT = Path(__file__).resolve().parents[3]
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
     parser = subparsers.add_parser(
         "install", help="Bootstrap Caddie on this machine."
+    )
+    parser.add_argument(
+        "--config",
+        help="Org config yaml: a local path or http(s):// URL, providing "
+        "skill_repo/skills/connector defaults.",
     )
     parser.add_argument("--skill-repo", help="Org skill repo: git URL or local path.")
     parser.add_argument("--skills", help="Comma-separated skill names.")
@@ -47,10 +52,19 @@ def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
 def run(args: argparse.Namespace) -> int:
     config_path = Path(args.config_path) if args.config_path else DEFAULT_CONFIG_PATH
 
+    if not config_path.is_file() and not (args.config or args.skill_repo or args.skills or args.connector):
+        raise SystemExit(
+            "caddie install needs a config source: pass --config <path-or-url>, "
+            "or --skill-repo/--skills/--connector directly."
+        )
+
     if config_path.is_file():
         config = _resolve_existing(config_path)
     else:
-        config = _resolve_fresh(args, config_path)
+        try:
+            config = _resolve_fresh(args, config_path)
+        except OrgConfigError as exc:
+            raise SystemExit(str(exc))
 
     ok = _finish_install(config, config_path, args)
     return 0 if ok else 1
@@ -68,26 +82,47 @@ def _resolve_existing(config_path: Path) -> CaddieConfig:
 
 
 def _resolve_fresh(args: argparse.Namespace, config_path: Path) -> CaddieConfig:
-    skill_repo = args.skill_repo or prompt_value("Skill repo (git URL or local path)")
-    clone_root = config_path.parent / "skill_repo"
-    skill_repo_path = resolve_skill_repo(skill_repo, clone_root)
+    defaults = load_org_config(args.config) if args.config else {}
 
-    defaults = load_defaults(skill_repo_path)
+    skill_repo = args.skill_repo or defaults.get("skill_repo")
+    if not skill_repo:
+        raise SystemExit(
+            "No skill_repo given: pass --skill-repo, or a --config yaml that "
+            "defines one."
+        )
 
     skills = (
         [s.strip() for s in args.skills.split(",") if s.strip()]
         if args.skills
-        else prompt_list("Skills", defaults.get("skills"))
+        else list(defaults.get("skills") or [])
     )
-    connector = args.connector or prompt_value("Connector", defaults.get("connector"))
-
-    connector_settings = {}
-    for key, value in defaults.items():
-        if key in ("skills", "connector"):
-            continue
-        connector_settings[key] = prompt_value(
-            f"{connector} {key}", str(value) if value is not None else None
+    if not skills:
+        raise SystemExit(
+            "No skills given: pass --skills, or a --config yaml that defines "
+            "some."
         )
+
+    connector = args.connector or defaults.get("connector")
+    if not connector:
+        raise SystemExit(
+            "No connector given: pass --connector, or a --config yaml that "
+            "defines one."
+        )
+
+    clone_root = config_path.parent / "skill_repo"
+    skill_repo_path = resolve_skill_repo(skill_repo, clone_root)
+
+    connector_settings = {
+        key: value
+        for key, value in defaults.items()
+        if key not in ("skill_repo", "skills", "connector", "caddie_source")
+    }
+
+    print(f"skill_repo: {skill_repo}")
+    print(f"skills: {', '.join(skills)}")
+    print(f"connector: {connector}")
+    for key, value in connector_settings.items():
+        print(f"{key}: {value}")
 
     return CaddieConfig(
         skills=skills,
@@ -95,6 +130,7 @@ def _resolve_fresh(args: argparse.Namespace, config_path: Path) -> CaddieConfig:
         connector=connector,
         connector_settings=connector_settings,
         skill_repo_path=str(skill_repo_path),
+        config_source=args.config,
     )
 
 
@@ -107,14 +143,12 @@ def _finish_install(
     existed, since these steps are what a plain re-run of `caddie
     install` is expected to (re)verify.
     """
-    username = config.username or resolve_username()
     notebooks_root = Path(args.notebooks_root).expanduser() if args.notebooks_root else (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
 
-    config.username = username
     config.notebooks_root = str(notebooks_root)
 
     connector_holder: dict[str, object] = {}
@@ -133,14 +167,8 @@ def _finish_install(
     results = run_checks(
         [
             ("uv installed", ensure_uv_installed),
-            (
-                "marimo-pair skill installed",
-                lambda: install_marimo_pair_skill(CADDIE_CORE_ROOT),
-            ),
-            (
-                "notebooks root ready",
-                lambda: ensure_user_notebooks_dir(notebooks_root, username),
-            ),
+            ("marimo-pair skill installed", install_marimo_pair_skill),
+            ("notebooks root ready", lambda: ensure_notebooks_dir(notebooks_root)),
             ("connector authenticated", _authenticate),
             ("connector live query", _live_query),
         ]

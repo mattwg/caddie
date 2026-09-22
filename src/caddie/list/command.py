@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.identity import resolve_username
 from caddie.install.notebooks import resolve_notebooks_root
 from caddie.notebook.builder import notebook_path
 
@@ -47,15 +46,13 @@ def run(args: argparse.Namespace) -> int:
     config_path = Path(args.config_path) if args.config_path else DEFAULT_CONFIG_PATH
     config = load_config(config_path)
 
-    username = config.username or resolve_username()
     notebooks_root = (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    user_dir = notebooks_root / username
 
-    projects = _discover(user_dir, args.pattern)
+    projects = _discover(notebooks_root, args.pattern)
     if args.recent is not None:
         projects = projects[: args.recent]
 
@@ -68,12 +65,12 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
-def _discover(user_dir: Path, pattern: str | None) -> list[tuple[str, float]]:
-    if not user_dir.is_dir():
+def _discover(notebooks_root: Path, pattern: str | None) -> list[tuple[str, float]]:
+    if not notebooks_root.is_dir():
         return []
 
     projects = []
-    for entry in user_dir.iterdir():
+    for entry in notebooks_root.iterdir():
         if not entry.is_dir():
             continue
         nb_path = notebook_path(entry)

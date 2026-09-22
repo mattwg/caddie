@@ -17,7 +17,6 @@ import subprocess
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.identity import resolve_username
 from caddie.install.notebooks import resolve_notebooks_root
 from caddie.notebook.builder import notebook_path
 
@@ -42,16 +41,15 @@ def run(args: argparse.Namespace) -> int:
     config_path = Path(args.config_path) if args.config_path else DEFAULT_CONFIG_PATH
     config = load_config(config_path)
 
-    username = config.username or resolve_username()
     notebooks_root = (
         Path(config.notebooks_root).expanduser()
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    project_dir = notebooks_root / username / args.project
+    project_dir = notebooks_root / args.project
     nb_path = notebook_path(project_dir)
     if not nb_path.is_file():
-        raise SystemExit(f"No project '{args.project}' under {notebooks_root / username}.")
+        raise SystemExit(f"No project '{args.project}' under {notebooks_root}.")
 
     uv_bin = shutil.which("uv")
     if uv_bin is None:

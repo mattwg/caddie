@@ -23,9 +23,16 @@ _KNOWN_KEYS = {
     "context",
     "notebooks_root",
     "skill_repo_path",
-    "username",
+    "config_source",
 }
 _REQUIRED_KEYS = ("skills", "skill_repo", "connector")
+
+# Keys a pre-plugin caddie.yaml may still carry that are no longer part
+# of the config shape. Stripped on load rather than left to fall into
+# connector_settings (where they'd get passed as an unexpected kwarg to
+# a connector's constructor) and dropped for good the next time this
+# file is saved.
+_DROPPED_LEGACY_KEYS = {"username"}
 
 _yaml = YAML()
 _yaml.preserve_quotes = True
@@ -68,7 +75,9 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> CaddieConfig:
 
     _validate(raw, path)
 
-    connector_settings = {k: raw[k] for k in raw if k not in _KNOWN_KEYS}
+    connector_settings = {
+        k: raw[k] for k in raw if k not in _KNOWN_KEYS and k not in _DROPPED_LEGACY_KEYS
+    }
 
     return CaddieConfig(
         skills=list(raw["skills"]),
@@ -78,7 +87,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> CaddieConfig:
         context=raw.get("context"),
         notebooks_root=raw.get("notebooks_root"),
         skill_repo_path=raw.get("skill_repo_path"),
-        username=raw.get("username"),
+        config_source=raw.get("config_source"),
     )
 
 
@@ -101,7 +110,7 @@ def save_config(config: CaddieConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
     raw["skill_repo"] = config.skill_repo
     raw["connector"] = config.connector
 
-    for key in ("context", "notebooks_root", "skill_repo_path", "username"):
+    for key in ("context", "notebooks_root", "skill_repo_path", "config_source"):
         value = getattr(config, key)
         if value is not None:
             raw[key] = value
@@ -110,6 +119,10 @@ def save_config(config: CaddieConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
 
     for key, value in config.connector_settings.items():
         raw[key] = value
+
+    for key in _DROPPED_LEGACY_KEYS:
+        if key in raw:
+            del raw[key]
 
     with path.open("w") as f:
         _yaml.dump(raw, f)
