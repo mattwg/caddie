@@ -84,9 +84,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> CaddieConfig:
 
     _validate(raw, path)
 
-    connector_settings = {
-        k: raw[k] for k in raw if k not in _KNOWN_KEYS and k not in _DROPPED_LEGACY_KEYS
-    }
+    connector_settings = {k: raw[k] for k in raw if k not in NON_CONNECTOR_KEYS}
 
     return CaddieConfig(
         skills=list(raw["skills"]),
