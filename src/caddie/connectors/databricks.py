@@ -35,15 +35,24 @@ class DatabricksConnector:
         self._authenticated = False
         self._session: Any = None
 
+    def check_config(self) -> None:
+        """Raise early if the settings on hand can't authenticate.
+
+        Called before any other install/update steps run, so a missing
+        `host` is reported immediately rather than after other checks
+        (uv, marimo-pair, notebooks root) have already run.
+        """
+        if not _profile_exists(self.profile) and not self.host:
+            raise DatabricksAuthError(
+                f"No Databricks CLI profile named '{self.profile}' exists yet, "
+                "and no 'host' setting was provided to create one."
+            )
+
     def authenticate(self) -> None:
+        self.check_config()
         if _profile_exists(self.profile):
             cmd = ["databricks", "auth", "login", "--profile", self.profile]
         else:
-            if not self.host:
-                raise DatabricksAuthError(
-                    f"No Databricks CLI profile named '{self.profile}' exists yet, "
-                    "and no 'host' setting was provided to create one."
-                )
             cmd = [
                 "databricks",
                 "auth",

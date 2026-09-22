@@ -23,7 +23,7 @@ from caddie.config.loader import (
     save_config,
 )
 from caddie.config.model import CaddieConfig
-from caddie.connectors.loader import load_connector_from_config
+from caddie.connectors.loader import ConnectorNotFoundError, load_connector_from_config
 from caddie.install.marimo_pair import install_marimo_pair_skill
 from caddie.install.notebooks import ensure_notebooks_dir, resolve_notebooks_root
 from caddie.install.org_config import OrgConfigError, load_org_config
@@ -154,11 +154,24 @@ def _finish_install(
 
     config.notebooks_root = str(notebooks_root)
 
-    connector_holder: dict[str, object] = {}
+    try:
+        connector = load_connector_from_config(config)
+    except ConnectorNotFoundError as exc:
+        raise SystemExit(str(exc))
+
+    check_config = getattr(connector, "check_config", None)
+    if check_config is not None:
+        try:
+            check_config()
+        except Exception as exc:
+            raise SystemExit(
+                f"Connector settings incomplete for '{config.connector}': {exc}"
+            )
+
+    connector_holder: dict[str, object] = {"connector": connector}
 
     def _authenticate() -> None:
-        connector = load_connector_from_config(config)
-        connector_holder["connector"] = connector
+        connector = connector_holder["connector"]
         connector.authenticate()
 
     def _live_query() -> None:
