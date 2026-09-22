@@ -13,7 +13,12 @@ import argparse
 from pathlib import Path
 
 from caddie.checks import print_summary, run_checks
-from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config, save_config
+from caddie.config.loader import (
+    DEFAULT_CONFIG_PATH,
+    NON_CONNECTOR_KEYS,
+    load_config,
+    save_config,
+)
 from caddie.connectors.loader import load_connector_from_config
 from caddie.install.marimo_pair import upgrade_marimo_pair_skill
 from caddie.install.org_config import OrgConfigError, load_org_config
@@ -65,7 +70,7 @@ def run(args: argparse.Namespace) -> int:
         connector_settings = {
             key: value
             for key, value in org_config.items()
-            if key not in ("skill_repo", "skills", "connector")
+            if key not in NON_CONNECTOR_KEYS
         }
         for key, value in connector_settings.items():
             old_value = config.connector_settings.get(key)
