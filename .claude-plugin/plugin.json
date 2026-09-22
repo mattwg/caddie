@@ -1,5 +1,5 @@
 {
   "name": "caddie",
-  "description": "Pair with a live marimo kernel to run a full data-analysis episode against your org's connector, and hand back a click-to-open notebook.",
+  "description": "The right way to do data analysis: ask questions about your company's data in plain language and get back a real answer, backed by a notebook you (or a data scientist) can open, rerun, and check anytime.",
   "version": "0.0.1"
 }

@@ -154,13 +154,26 @@ see step 2) if it isn't already on `PATH`, and everything after that
 (the pinned Python version, dependencies, other tooling) is handled
 by the install process itself.
 
-1. Install the `caddie` plugin in Claude Code (via your organization's
-   marketplace, once published, or `claude --plugin-dir <path>` while
-   developing locally):
+1. Install the `caddie` plugin (via your organization's marketplace,
+   once published, or a local plugin bundle while developing/testing):
 
-   ```
-   /plugin install caddie
-   ```
+   - **Claude Code (CLI)**: download the packaged zip and point
+     `--plugin-dir` at it directly, no unzipping needed:
+
+     ```
+     curl -L -o caddie-plugin-0.0.1.zip https://raw.githubusercontent.com/mattwg/caddie/main/releases/caddie-plugin-0.0.1.zip
+     claude --plugin-dir caddie-plugin-0.0.1.zip
+     ```
+
+     Then, inside that session:
+
+     ```
+     /plugin install caddie
+     ```
+
+   - **Claude Desktop**: go to Settings → Plugins, and add the
+     downloaded zip file manually from there (Desktop doesn't take a
+     `--plugin-dir` flag, so this has to be done through the menu).
 
 2. Run install:
 
