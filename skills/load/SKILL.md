@@ -24,25 +24,25 @@ rather than guessing at a workaround.
 
 ## Steps
 
-1. Read the notebook file directly (`~/caddie/notebooks/<project>/
-   notebook.py`, or the configured `notebooks_root` if overridden) so
-   its episodes — question, plan, steps, answer — are in context. If
-   it doesn't exist, tell the user and suggest `/caddie:list` to find
-   the right slug.
-
-2. Pair with the project's kernel:
+1. Pair with the project's kernel:
 
    a. Run `caddie notebook-edit --project <project>`. It gives you
-      `url` and `file` (this project's notebook's absolute path).
-   b. Invoke the `marimo-pair` skill (via the `Skill` tool) and run its
+      `url` and `file` (this project's notebook's absolute path — under
+      a year/quarter/month/date partition of `notebooks_root`, not
+      directly under it, so don't guess this path yourself). If it
+      reports "No project", tell the user and suggest `/caddie:list` to
+      find the right slug.
+   b. Read that `file` path directly so the project's episodes —
+      question, plan, steps, answer — are in context.
+   c. Invoke the `marimo-pair` skill (via the `Skill` tool) and run its
       required first call:
       ```
       bash <skill-dir>/scripts/execute-code.sh --url <url> --file <file> \
         -c "import marimo._code_mode as cm; help(cm)"
       ```
 
-   If step 2a reports `session: none`, pairing failed — skip to step 6
-   and relay the notebook's contents read-only (from step 1), with a
+   If step 1a reports `session: none`, pairing failed — skip to step 6
+   and relay the notebook's contents read-only (from step 1b), with a
    note that nothing was re-run.
 
 3. Re-run every existing step, in order, across every episode: find
@@ -59,19 +59,19 @@ rather than guessing at a workaround.
 
 5. Open the notebook live: invoke the `edit` skill (/caddie:edit) for this
    project. This matters, not just style — only the live server shows
-   the freshly re-run results from step 3 with working
+   the freshly re-run results from step 2 with working
    `mo.ui.table`/dataframe previews; the static export is inert.
 
 6. Relay the result:
    - Each query step's outcome (rows returned) and each chart step's
      validity — not just "it ran."
-   - Each episode's plan and answer text (from step 1).
+   - Each episode's plan and answer text (from step 1b).
    - Any step that now fails (e.g. a dropped column): say the project
      still loaded fine, but quote that step's actual error.
    - The live URL, with the static path as a fallback if opening it
      failed.
    - `overall: ok` or `overall: partial` (list what failed).
-   - If pairing failed (step 2), say so plainly and that nothing was
+   - If pairing failed (step 1), say so plainly and that nothing was
      re-run.
 
 7. Treat this project as the active one for the rest of the

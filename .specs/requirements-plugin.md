@@ -186,15 +186,18 @@ config field (`config.username`) — for a path segment that isn't doing
 real work.
 
 **Requirement:** drop `identity.py` and the `<username>` path segment
-entirely. Notebook paths become `~/caddie/notebooks/<project-slug>/
-notebook.py` (exact new shape TBD alongside the existing todo item on
-year/month/day organization — `.specs/todo.md` already flags "no need
-for user name in notebooks folder path" as a separate, pre-existing
-idea; this pass is where it actually gets acted on). This touches seven
-call sites (`caddie.notebook.start`, `.edit`, `.share`,
-`.add_dependency`, `.render`, `caddie.list.command`, and
-`caddie.install.command` itself) plus the `username` field on
-`config/model.py`'s config object — all currently doing
+entirely. Notebook paths become `~/caddie/notebooks/<year>/Q<quarter>/
+<month>/<date>/<project-slug>/notebook.py` — the year/quarter/month/date
+partition folded in the pre-existing todo item on year/month/day
+organization (`.specs/todo.md`) alongside dropping `<username>`, since
+both touch the same path segment. `find_project_dir`
+(`install/notebooks.py`) resolves a bare `--project <slug>` to wherever
+its date partition put it, so the seven call sites
+(`caddie.notebook.start`, `.edit`, `.share`, `.add_dependency`,
+`.render`, `caddie.list.command`, and `caddie.install.command` itself)
+never need to know or reconstruct a project's partition — same as they
+never resolved `<username>` themselves before. The `username` field on
+`config/model.py`'s config object is gone along with
 `config.username or resolve_username()`.
 
 Not itself caused by the plugin move — a local laptop tool never needed

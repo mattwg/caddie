@@ -14,7 +14,6 @@ from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
 from caddie.install.notebooks import resolve_notebooks_root
-from caddie.notebook.builder import notebook_path
 
 DEFAULT_RECENT = 10
 
@@ -69,16 +68,15 @@ def _discover(notebooks_root: Path, pattern: str | None) -> list[tuple[str, floa
     if not notebooks_root.is_dir():
         return []
 
+    # Projects live under a year/quarter/month/date partition
+    # (`install/notebooks.py:partition_dir`), so this has to walk the
+    # whole tree rather than list the root's immediate children.
     projects = []
-    for entry in notebooks_root.iterdir():
-        if not entry.is_dir():
+    for nb_path in notebooks_root.rglob("notebook.py"):
+        slug = nb_path.parent.name
+        if pattern and not fnmatch.fnmatch(slug, pattern):
             continue
-        nb_path = notebook_path(entry)
-        if not nb_path.is_file():
-            continue
-        if pattern and not fnmatch.fnmatch(entry.name, pattern):
-            continue
-        projects.append((entry.name, nb_path.stat().st_mtime))
+        projects.append((slug, nb_path.stat().st_mtime))
 
     projects.sort(key=lambda p: p[1], reverse=True)
     return projects

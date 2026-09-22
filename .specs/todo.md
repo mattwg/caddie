@@ -6,7 +6,8 @@
 - Find way to give agent the right set of tools and permissions to avoid lots of approvals
     - CLI (uv run caddie...) needs approval in Claude Code 
 
-- notebooks should be organized into year/month/day folder structure
+- [done] notebooks organized into year/quarter/month/date folder structure
+  (`install/notebooks.py:partition_dir`)
     - improve the notebook naming
 
 - sessions should be flagged in the notebook - titles and sections for easier navigation
