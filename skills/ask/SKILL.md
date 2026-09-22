@@ -103,11 +103,15 @@ showed you. Use these shapes:
 - **Question cell** (continuation only): name `question_{E}`, code
   `mo.md({question_markdown!r})`, created at the end of the notebook
   (after the prior episode's `answer_{E-1}`).
-- **Plan cell**: name `plan_{E}`, code `mo.md({plan_markdown!r})` (a
-  Python `repr()` of the markdown text, not a triple-quoted template).
-  Create it immediately after `question_{E}`. If it already exists (a
-  mid-episode revision), edit that cell in place instead — read its
-  current body first, per marimo pair's own guidance.
+- **Plan cell**: name `plan_{E}`, code `mo.md({plan_summary_markdown!r})`
+  (a Python `repr()` of the markdown text, not a triple-quoted
+  template). `plan_summary_markdown` is a high-level condensation of
+  `lead-analyst`'s plan — see "Condensing the plan for the notebook"
+  below — never the full plan text verbatim; the reader is the user,
+  not `data-analyst`. Create it immediately after `question_{E}`. If it
+  already exists (a mid-episode revision), edit that cell in place
+  instead — read its current body first, per marimo pair's own
+  guidance.
 - **Answer cell**: name `answer_{E}`, code
   `mo.md({answer_markdown!r})`, created once at the end (never edited —
   one answer per episode; if you find yourself about to write a second
@@ -137,6 +141,29 @@ PYEOF
 ```
 
 The same one-call pattern applies to `question_{E}` and `answer_{E}`.
+
+### Condensing the plan for the notebook
+
+`lead-analyst`'s plan (step 4 below) is written for `data-analyst`: each
+step carries a description, what it establishes, and a contingency, so
+it reads as internal reasoning, not something a stakeholder wants to
+scroll through. The `plan_{E}` cell is not that document — it's a
+skimmable preview of what the analysis is about to do. Condense it
+yourself before writing the cell:
+
+- One line per step, description only (what the step does), as a
+  numbered list.
+- Drop "what it establishes" and the contingency text entirely — that
+  reasoning stays internal to `data-analyst`'s execution, not in the
+  notebook.
+- No preamble restating the question, no meta-commentary about the plan
+  itself — just the steps.
+
+The full plan text (with contingencies) still goes to `data-analyst`
+verbatim in step 6 — only what lands in the notebook cell is
+shortened. If a step's one-liner alone would be genuinely confusing
+without its rationale, trim the rationale to a short clause rather than
+reinstating the full contingency language.
 
 `data-analyst` pairs with this same server for its own step cells
 (`description_{E}_{S}`/`code_{E}_{S}`/`chart_{E}_{S}`/`output_{E}_{S}`)
@@ -191,8 +218,10 @@ a step cell itself.
    not be established: stop and report to the user exactly what failed
    and why.
 
-   c. Write the `plan_{E}` cell through that paired session
-      (`lead-analyst`'s plan text verbatim), per the shape given above.
+   c. Write the `plan_{E}` cell through that paired session — the
+      condensed, numbered-steps summary of `lead-analyst`'s plan, per
+      "Condensing the plan for the notebook" above, not the plan text
+      verbatim.
 
 6. **Call `data-analyst`** via the `Agent` tool, with the full plan
    text (verbatim, including contingencies), the project slug, and the
