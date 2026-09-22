@@ -8,7 +8,7 @@ import argparse
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.notebooks import resolve_notebooks_root
+from caddie.install.notebooks import find_project_dir, resolve_notebooks_root
 from caddie.notebook.portable import render_portable_notebook
 
 
@@ -34,8 +34,8 @@ def run(args: argparse.Namespace) -> int:
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    project_dir = notebooks_root / args.project
-    if not project_dir.is_dir():
+    project_dir = find_project_dir(notebooks_root, args.project)
+    if project_dir is None:
         raise SystemExit(f"No project '{args.project}' under {notebooks_root}.")
 
     try:

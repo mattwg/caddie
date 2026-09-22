@@ -217,7 +217,7 @@ Find existing projects under the user's notebooks folder — the discovery step 
 
 ## Storage
 
-- Default notebooks root is `~/caddie/notebooks/<username>/<project-slug>/notebook.py`, entirely **local to the laptop** — never committed to any org's repo.
+- Default notebooks root is `~/caddie/notebooks/<year>/Q<quarter>/<month>/<date>/<project-slug>/notebook.py` (see `.specs/requirements-plugin.md`, "Dropping identity resolution" — no `<username>` segment; the date partition groups projects by when they started, purely for browsability), entirely **local to the laptop** — never committed to any org's repo.
 - The notebooks root is user-configurable: `/caddie-install` accepts an optional override (flag or prompt) for the root path, and the resolved value is written to `~/.caddie/caddie.yaml`. If the user gives no override, the default above is used. This is a per-user, per-machine setting — consistent with `caddie.yaml` itself being local and user-level, two people pointed at the same `skill_repo` each have their own `caddie.yaml` and can keep notebooks somewhere different on their own laptops.
 - `~/.caddie/caddie.yaml` (local, not in git) is the single source of truth other commands read to find the user's folder and active plugins, avoiding repeated prompts.
 

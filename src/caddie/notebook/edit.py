@@ -62,7 +62,7 @@ import webbrowser
 from pathlib import Path
 
 from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config
-from caddie.install.notebooks import resolve_notebooks_root
+from caddie.install.notebooks import find_project_dir, resolve_notebooks_root
 from caddie.notebook.builder import notebook_path, refresh_header
 
 _URL_RE = re.compile(r"URL:\s*(\S+)")
@@ -108,11 +108,10 @@ def run(args: argparse.Namespace) -> int:
         if config.notebooks_root
         else resolve_notebooks_root(None)
     )
-    project_dir = notebooks_root / args.project
-    nb_path = notebook_path(project_dir)
-
-    if not nb_path.is_file():
+    project_dir = find_project_dir(notebooks_root, args.project)
+    if project_dir is None:
         raise SystemExit(f"No project '{args.project}' under {notebooks_root}.")
+    nb_path = notebook_path(project_dir)
 
     existing = find_running_server(notebooks_root)
     if existing is not None:
@@ -169,11 +168,24 @@ class RunningServer:
 
 def find_running_server(notebooks_root: Path) -> RunningServer | None:
     result = subprocess.run(["ps", "-eo", "pid,command"], capture_output=True, text=True)
+    # Exact argv match, not a substring: `notebooks_root` is itself a
+    # path prefix of any of its own subdirectories (e.g. an old,
+    # differently-rooted `marimo edit` process left running from
+    # before a notebooks-root layout change), so a plain `in` check
+    # could mistake a stale server rooted one level too deep for the
+    # current one, and callers would then open files it was never
+    # started against - marimo would never register a session for
+    # them.
     target = str(notebooks_root)
     for line in result.stdout.splitlines():
-        if "marimo edit" not in line or target not in line:
+        if "marimo edit" not in line:
             continue
-        pid = line.split(None, 1)[0]
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            continue
+        pid, command = parts
+        if target not in command.split():
+            continue
         port = _listen_port_for_pid(pid)
         if port is None:
             continue
