@@ -130,6 +130,8 @@ Each of these is a Claude Code plugin skill (invoked with a namespaced
   context, re-running its steps against live data.
 - `/caddie:edit <project>`: open a project's notebook in a live
   Marimo editor, for hand-editing rather than reading a static export.
+- `/caddie:open`: open Marimo on the whole notebooks workspace, with
+  no specific project selected — useful for browsing what's there.
 - `/caddie:add-dependency <project> <package>`: add a Python package
   to one project's notebook, isolated to that notebook's own sandboxed
   environment rather than caddie's own shared venv.
