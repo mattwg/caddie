@@ -34,6 +34,15 @@ _REQUIRED_KEYS = ("skills", "skill_repo", "connector")
 # file is saved.
 _DROPPED_LEGACY_KEYS = {"username"}
 
+# Every key that belongs to caddie's own config shape (current or
+# legacy) rather than to a connector. An org config yaml reuses the
+# same key names for skill_repo/skills/connector/etc, plus its own
+# caddie_source (consumed by /caddie:install itself, before caddie
+# exists, to know what to `uv tool install`) — none of these should
+# ever land in connector_settings, whatever else the org config yaml
+# happens to contain.
+NON_CONNECTOR_KEYS = _KNOWN_KEYS | _DROPPED_LEGACY_KEYS | {"caddie_source"}
+
 _yaml = YAML()
 _yaml.preserve_quotes = True
 _yaml.width = 4096  # don't line-wrap long scalars like skill_repo_path

@@ -16,7 +16,12 @@ import argparse
 from pathlib import Path
 
 from caddie.checks import print_summary, run_checks
-from caddie.config.loader import DEFAULT_CONFIG_PATH, load_config, save_config
+from caddie.config.loader import (
+    DEFAULT_CONFIG_PATH,
+    NON_CONNECTOR_KEYS,
+    load_config,
+    save_config,
+)
 from caddie.config.model import CaddieConfig
 from caddie.connectors.loader import load_connector_from_config
 from caddie.install.marimo_pair import install_marimo_pair_skill
@@ -113,9 +118,7 @@ def _resolve_fresh(args: argparse.Namespace, config_path: Path) -> CaddieConfig:
     skill_repo_path = resolve_skill_repo(skill_repo, clone_root)
 
     connector_settings = {
-        key: value
-        for key, value in defaults.items()
-        if key not in ("skill_repo", "skills", "connector", "caddie_source")
+        key: value for key, value in defaults.items() if key not in NON_CONNECTOR_KEYS
     }
 
     print(f"skill_repo: {skill_repo}")
