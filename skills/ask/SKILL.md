@@ -1,6 +1,6 @@
 ---
 name: ask
-description: The enforced entry point for data analysis with Caddie — never answer a data question with just an inline chat result or a single query. Clarifies the question, gets a plan from lead-analyst, hands the whole plan to data-analyst to execute front to back in one call against the active connector, gets the final answer back from lead-analyst, and hands back a live, click-to-open notebook (via /caddie:edit) with working data previews, not just a static export. Trigger on /caddie:ask followed by a question, and also treat a plain follow-up data question later in the same conversation as an implicit continuation of the active project (see Continuation below).
+description: The enforced entry point for data analysis with Caddie — never answer a data question with just an inline chat result or a single query. Clarifies the question, gets a plan from lead-analyst, hands the whole plan to data-analyst to execute front to back in one call against the active connector, gets the final answer back from lead-analyst, and hands back a live, click-to-open notebook (via /caddie:edit) with working data previews. Trigger on /caddie:ask followed by a question, and also treat a plain follow-up data question later in the same conversation as an implicit continuation of the active project (see Continuation below).
 ---
 
 # /caddie:ask "<question>"
@@ -16,8 +16,8 @@ This skill is the orchestrator: it owns every `caddie` CLI call, every
 `marimo-pair` pairing call, and every sub-agent invocation, but it does
 not write queries or interpret results itself — see Orchestration
 below. Only `notebook-start` (creating the file a kernel would attach
-to) and the final HTML render are plain CLI file operations; every
-other write to the notebook for the rest of the episode — the plan
+to) is a plain CLI file operation; every other write to the notebook
+for the rest of the episode — the plan
 cell, every step (inside `data-analyst`), and the answer cell — goes
 through the one paired kernel this skill starts right after
 `notebook-start`, via the `marimo-pair` skill, the same mechanism
@@ -270,41 +270,29 @@ a step cell itself.
    per "Pairing with the notebook's kernel" above. Once the cell is
    written, confirm it actually landed on disk before moving on (the
    paired kernel autosaves, but don't assume instantaneous — a quick
-   check that `answer_{E}` is in the file is cheap insurance), then
-   render the static HTML separately:
-   ```
-   caddie notebook-render --project <slug>
-   ```
-   Read back `rendered`/`open` from its output. Keep that path as a
-   fallback for step 10 — the real thing to open next is the live
-   notebook, not this static export.
+   check that `answer_{E}` is in the file is cheap insurance).
 
-9. Open the notebook live rather than the static export: invoke the
-   `edit` skill (/caddie:edit) for this project (same as a user typing
-   `/caddie:edit <slug>` themselves) — it finds the same shared server
-   this episode has already been pairing against and opens it landed on
-   marimo's "Present" view (`?file=<file>&view-as=present`). This
-   matters, not just style: the static HTML from step 8 has no running
-   kernel, so any `mo.ui.table`/dataframe output in it degrades to an
-   inert "Preview data" button that can't fetch rows — the live server
-   actually renders the data. Do this every time, not just on request.
-   Since every write this episode already went through that same live
-   kernel (not a direct file edit), there's no stale-clobber risk here
-   the way there would be after a raw file write — this step is just
-   making sure the user is looking at the right view of a session
-   that's already correct.
+9. Open the notebook live: invoke the `edit` skill (/caddie:edit) for
+   this project (same as a user typing `/caddie:edit <slug>`
+   themselves) — it finds the same shared server this episode has
+   already been pairing against and opens it landed on marimo's
+   "Present" view (`?file=<file>&view-as=present`). Do this every time,
+   not just on request. Since every write this episode already went
+   through that same live kernel (not a direct file edit), there's no
+   stale-clobber risk here the way there would be after a raw file
+   write — this step is just making sure the user is looking at the
+   right view of a session that's already correct.
 
 10. Relay to the user:
     - The answer text itself, exactly as `lead-analyst` returned it —
       a genuine conclusion, not row/column counts. It should directly
       address the question that was asked and support the decision
       being made.
-    - A one-line note that the notebook opened live in their browser
-      (via `/caddie:edit`), plus its URL as plain text as a fallback in
-      case the open failed. Mention the static rendered path from step
-      8 only as a secondary fallback (e.g. if the live server couldn't
-      start) — it's not the primary artifact anymore, since it can't
-      show live data.
+    - A link to the notebook (the URL `/caddie:edit` opened in step 9).
+      No fallback URL, no static export — just the one link.
+    - A simple, non-technical note that if they come back to this
+      later, typing `/caddie:edit <slug>` will restart the server and
+      reopen this same notebook.
     - If a contingency was applied mid-run, or `data-analyst` stopped
       at an uncovered deviation, a one-line note that it happened (the
       full detail is in the notebook, not repeated in chat).
