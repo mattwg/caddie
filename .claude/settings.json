@@ -1,4 +1,5 @@
 {
+  "outputStyle": "Business Owner",
   "permissions": {
     "allow": [
       "Bash(git add *)"

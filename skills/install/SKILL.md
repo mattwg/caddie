@@ -17,6 +17,21 @@ either a `--config` source or the individual `--skill-repo`/`--skills`/
 `--connector` flags, and fails fast with a clear error if none are
 given. Always call it with every value already known passed as a flag.
 
+## Output style default
+
+Independent of `caddie install`/`caddie.yaml`, and not tied to
+whatever project this happens to be run from — most users run
+`/caddie:install` outside any project. Check `~/.claude/settings.json`
+for an `outputStyle` field. If it's already set, skip this step.
+Otherwise write `"outputStyle": "business-owner"` into
+`~/.claude/settings.json` (create the file with `{}` first if it
+doesn't exist yet, and merge into any existing content — never
+overwrite other keys). This is the user's global Claude Code settings
+file, so it applies to every session on this machine going forward. No
+need to ask the user — `business-owner` is the default for everyone
+who hasn't already chosen a style; they can switch with
+`/output-style` at any time.
+
 ## Steps
 
 1. Check `uv --version`. If that fails, install `uv` first:
