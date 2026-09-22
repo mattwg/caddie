@@ -13,15 +13,30 @@ adds it with `caddie notebook-add-dependency` (a thin wrapper over `uv
 add --script`), which only touches that one notebook's own header -
 never caddie's shared venv or install.
 
-caddie is declared as a version-pinned PyPI-style requirement rather
-than a local path or `file://` URL: once caddie is installed as a
-regular tool (`uv tool install caddie`) rather than an editable git
+caddie is declared as a version-pinned requirement (`caddie==<version>`)
+rather than a local path or `file://` URL: once caddie is installed as
+a regular tool (`uv tool install ...`) rather than an editable git
 checkout, there's no local project path to point a dependency at. The
 tradeoff is that a sandbox picks up whatever version of caddie was
 installed at header-generation time, not necessarily the very latest -
 re-run `caddie update` (or `caddie notebook-edit`, which refreshes the
 header - see `notebook/edit.py`) after upgrading caddie to pick up a
 new pin.
+
+Caddie isn't published on PyPI - it's installed via `uv tool install
+git+https://github.com/mattwg/caddie` (or another git remote/fork).
+A bare `caddie==<version>` requirement in the header would ask `uv`'s
+sandbox resolver to fetch that name from PyPI instead, which can
+silently resolve to a same-named, unrelated PyPI project instead of
+failing loudly. So whenever caddie's own installed distribution was
+itself sourced from git (detected via `direct_url.json` - see
+`_caddie_git_source` below), the header also carries a
+`[tool.uv.sources]` entry pinning `caddie` back to that same git URL,
+overriding the bare version requirement for anyone whose `uv tool
+install` command matches how this notebook's own header was built. A
+caddie installed straight from a real PyPI release (no `direct_url.json`,
+or one without `vcs_info`) needs no such override - the plain version
+pin already resolves correctly.
 
 The header only includes the dependencies the project's actual
 connector needs, not caddie's full dependency list - see
@@ -50,6 +65,7 @@ notebook's own PEP 723 block.
 """
 
 import importlib.metadata
+import json
 
 from marimo._utils.scripts import write_pyproject_to_script
 
@@ -88,6 +104,27 @@ def _caddie_requires_python() -> str:
 
 def _caddie_dependencies() -> list[str]:
     return list(importlib.metadata.requires("caddie") or [])
+
+
+def _caddie_git_source() -> str | None:
+    """The git URL caddie's own installed distribution was resolved
+    from, or `None` if it was installed from a real PyPI release (or
+    some other non-VCS source).
+
+    `direct_url.json` is written into a distribution's `dist-info` by
+    pip/uv whenever the requirement they installed was a VCS or direct
+    URL rather than a plain PyPI name - see
+    https://packaging.python.org/en/latest/specifications/direct-url/.
+    It's absent for an ordinary PyPI install, which is exactly the
+    signal used here."""
+    raw = importlib.metadata.distribution("caddie").read_text("direct_url.json")
+    if not raw:
+        return None
+    info = json.loads(raw)
+    vcs_info = info.get("vcs_info")
+    if not vcs_info or vcs_info.get("vcs") != "git":
+        return None
+    return info.get("url")
 
 
 def _dependency_name(requirement: str) -> str:
@@ -152,11 +189,18 @@ def base_dependencies(connector_name: str) -> list[str]:
 
 def render_script_header(connector_name: str) -> str:
     """A PEP 723 `# /// script` block declaring `base_dependencies()`
-    for the project's actual connector."""
+    for the project's actual connector - plus a `[tool.uv.sources]`
+    pin for `caddie` itself back to its own git remote, if that's
+    where this install of caddie came from (see `_caddie_git_source`),
+    so the sandbox resolver doesn't fall through to an unrelated,
+    same-named PyPI project."""
     project = {
         "requires-python": _caddie_requires_python(),
         "dependencies": base_dependencies(connector_name),
     }
+    git_source = _caddie_git_source()
+    if git_source:
+        project["tool"] = {"uv": {"sources": {"caddie": {"git": git_source}}}}
     return write_pyproject_to_script(project)
 
 
