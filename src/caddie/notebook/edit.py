@@ -241,7 +241,7 @@ def ensure_session(url: str, nb_path: Path) -> bool:
     if _has_session_for(url, nb_path):
         return True
 
-    webbrowser.open(f"{url}?file={urllib.parse.quote(str(nb_path))}")
+    webbrowser.open(f"{url}?file={urllib.parse.quote(str(nb_path))}&view-as=present")
     deadline = time.monotonic() + _SESSION_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         if _has_session_for(url, nb_path):
