@@ -33,14 +33,19 @@ These apply to every sub-agent call this skill makes:
 - Never invoke `lead-analyst` and `data-analyst` concurrently, and
   never invoke either agent concurrently with itself. Each call must
   fully return before the next one is issued.
-- `lead-analyst` is called twice per episode (plan, then interpret).
-  `data-analyst` is called exactly once per episode, to run the whole
-  plan. Neither agent can be resumed or expected to remember an earlier
+- `lead-analyst` is called at least twice per episode (plan, then
+  interpret), and `data-analyst` at least once (to run the whole plan).
+  If the interpretation call returns a gap report instead of an answer
+  (see step 7 below), that adds one more call to each: `data-analyst`
+  to fix the specific gap, then `lead-analyst` again to interpret the
+  updated report. Bounded to one such round per episode — see step 7.
+  Neither agent can be resumed or expected to remember an earlier
   call — treat every call as a fresh spawn and include everything it
   needs directly in its prompt (the plan text verbatim, for
   `data-analyst`; the plan text and `data-analyst`'s report, verbatim,
-  for the interpretation call). Don't reference "the plan from earlier"
-  — restate it.
+  for the interpretation call — and, for a gap-fix round, the gap
+  report and prior report verbatim too). Don't reference "the plan from
+  earlier" — restate it.
 
 ## Invoking the CLI
 
@@ -241,8 +246,24 @@ a step cell itself.
    with itself." Since every call is stateless, include the plan text
    from step 4 and `data-analyst`'s full report from step 6, verbatim,
    in this call's prompt — don't reference either by assumption. It
-   returns the final natural-language answer, with a caveat baked in if
-   `data-analyst` hit an uncovered deviation.
+   returns either the final natural-language answer (with a caveat
+   baked in if `data-analyst` hit an uncovered deviation), or a gap
+   report (marked `GAP:`, see `lead-analyst`'s own instructions) if it
+   found the report doesn't cover something the plan called for.
+
+   If it's a gap report, this stays inside the current episode — it is
+   never a reason to start a new one:
+   a. **Call `data-analyst` again**, in this same episode, with the gap
+      report verbatim plus the original plan and its own prior report
+      from step 6 — it fixes the specific gap named (per its own
+      instructions: the plan's contingency first, then the analytics
+      skill for an alternate source) and returns an updated report.
+   b. **Call `lead-analyst` again**, with the same plan text and the
+      updated report from 7a. This is capped at one round: if this
+      second interpretation call still returns a gap report, that's
+      the end of it — treat what it returns as the final answer (it's
+      instructed to write one with a caveat rather than flag a third
+      round), and proceed to step 8. Never loop a second gap-fix round.
 
 8. Write the conclusion through the same paired kernel from step 5 —
    `lead-analyst`'s answer text (verbatim), as the `answer_{E}` cell
@@ -287,6 +308,11 @@ a step cell itself.
     - If a contingency was applied mid-run, or `data-analyst` stopped
       at an uncovered deviation, a one-line note that it happened (the
       full detail is in the notebook, not repeated in chat).
+    - If step 7's gap-fix round ran, a one-line note that a gap was
+      found and fixed in place (or, if the second interpretation call
+      still came back with a gap, that the answer carries a caveat for
+      it) — same treatment as a contingency: a pointer, not the full
+      detail.
     - Never paste raw preview rows into chat.
 
 A plan that turns out wrong in a way `data-analyst` wasn't authorized
