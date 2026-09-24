@@ -125,13 +125,18 @@ Each of these is a Claude Code plugin skill (invoked with a namespaced
   auth, and writes `~/.caddie/caddie.yaml`.
 - `/caddie:ask "<question>"`: the entry point for a new analysis.
   Clarifies, plans, executes, and answers, ending with a notebook.
-- `/caddie:list [pattern]`: list existing analysis projects.
-- `/caddie:load <project>`: bring an existing project back into
-  context, re-running its steps against live data.
+- `/caddie:explore "<instruction>"`: build a notebook step by step
+  under direct user direction — add a cell, revise one, or clean up
+  ones no longer needed — rather than solving a question end to end.
 - `/caddie:edit <project>`: open a project's notebook in a live
   Marimo editor, for hand-editing rather than reading a static export.
 - `/caddie:open`: open Marimo on the whole notebooks workspace, with
   no specific project selected — useful for browsing what's there.
+
+
+- `/caddie:list [pattern]`: list existing analysis projects.
+- `/caddie:load <project>`: bring an existing project back into
+  context, re-running its steps against live data.
 - `/caddie:add-dependency <project> <package>`: add a Python package
   to one project's notebook, isolated to that notebook's own sandboxed
   environment rather than caddie's own shared venv.
