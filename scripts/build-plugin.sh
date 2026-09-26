@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds releases/caddie-plugin-<version>.zip from the plugin sources
-# at the repo root (.claude-plugin/, agents/, output-styles/, skills/) -
-# exactly what a user unpacks with `claude --plugin-dir`.
+# at the repo root (.claude-plugin/, agents/, hooks/, output-styles/,
+# skills/) - exactly what a user unpacks with `claude --plugin-dir`.
 #
 # Usage: scripts/build-plugin.sh
 set -euo pipefail
@@ -14,6 +14,6 @@ out="releases/caddie-plugin-${version}.zip"
 
 mkdir -p releases
 rm -f "$out"
-zip -rX "$out" .claude-plugin agents output-styles skills -x '*.DS_Store'
+zip -rX "$out" .claude-plugin agents hooks output-styles skills -x '*.DS_Store'
 
 echo "built: $out"

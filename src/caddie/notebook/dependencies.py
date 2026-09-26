@@ -23,20 +23,26 @@ re-run `caddie update` (or `caddie notebook-edit`, which refreshes the
 header - see `notebook/edit.py`) after upgrading caddie to pick up a
 new pin.
 
-Caddie isn't published on PyPI - it's installed via `uv tool install
-git+https://github.com/mattwg/caddie` (or another git remote/fork).
-A bare `caddie==<version>` requirement in the header would ask `uv`'s
-sandbox resolver to fetch that name from PyPI instead, which can
-silently resolve to a same-named, unrelated PyPI project instead of
-failing loudly. So whenever caddie's own installed distribution was
-itself sourced from git (detected via `direct_url.json` - see
-`_caddie_git_source` below), the header also carries a
-`[tool.uv.sources]` entry pinning `caddie` back to that same git URL,
-overriding the bare version requirement for anyone whose `uv tool
-install` command matches how this notebook's own header was built. A
-caddie installed straight from a real PyPI release (no `direct_url.json`,
-or one without `vcs_info`) needs no such override - the plain version
-pin already resolves correctly.
+Caddie isn't published on PyPI - it's installed either via `uv tool
+install git+https://github.com/mattwg/caddie` (or another git
+remote/fork) or, for local development, `uv tool install --editable
+<path-to-checkout>`. A bare `caddie==<version>` requirement in the
+header would ask `uv`'s sandbox resolver to fetch that name from PyPI
+instead, which can silently resolve to a same-named, unrelated PyPI
+project instead of failing loudly - confirmed live, not theoretical:
+switching the installed tool from a git install to `--editable .` for
+local dev, without this override generalized to cover that case,
+produced exactly this silent fallback on the very next notebook
+created. So whenever caddie's own installed distribution was itself
+sourced from git *or* from a local editable checkout (detected via
+`direct_url.json` - see `_caddie_source_override` below), the header
+also carries a matching `[tool.uv.sources]` entry (a `git` URL or a
+`path`+`editable` pair) overriding the bare version requirement, for
+anyone whose `uv tool install` command matches how this notebook's own
+header was built. A caddie installed straight from a real PyPI release
+(no `direct_url.json`, or one with neither `vcs_info` nor an editable
+`dir_info`) needs no such override - the plain version pin already
+resolves correctly.
 
 The header only includes the dependencies the project's actual
 connector needs, not caddie's full dependency list - see
@@ -106,25 +112,41 @@ def _caddie_dependencies() -> list[str]:
     return list(importlib.metadata.requires("caddie") or [])
 
 
-def _caddie_git_source() -> str | None:
-    """The git URL caddie's own installed distribution was resolved
-    from, or `None` if it was installed from a real PyPI release (or
-    some other non-VCS source).
+def _caddie_source_override() -> dict | None:
+    """A `[tool.uv.sources]`-shaped override for `caddie` itself
+    (`{"git": url}` or `{"path": ..., "editable": True}`), or `None` if
+    caddie was installed from a real PyPI release (or some other
+    non-VCS, non-editable source) and needs no override.
 
     `direct_url.json` is written into a distribution's `dist-info` by
-    pip/uv whenever the requirement they installed was a VCS or direct
-    URL rather than a plain PyPI name - see
+    pip/uv whenever the requirement they installed was a VCS, local
+    path, or other direct URL rather than a plain PyPI name - see
     https://packaging.python.org/en/latest/specifications/direct-url/.
     It's absent for an ordinary PyPI install, which is exactly the
-    signal used here."""
+    signal used here. Two installs need an override: `uv tool install
+    git+<url>` (`vcs_info.vcs == "git"`) and `uv tool install --editable
+    <path>` (`dir_info.editable == true`, `url` a `file://` URL) - the
+    latter matters for local development, where there's no git remote
+    to point at, and initially had no coverage here at all (a real gap:
+    switching to `--editable .` silently broke this override rather
+    than erroring, since it just found no `vcs_info` and fell through
+    to `None`)."""
     raw = importlib.metadata.distribution("caddie").read_text("direct_url.json")
     if not raw:
         return None
     info = json.loads(raw)
+
     vcs_info = info.get("vcs_info")
-    if not vcs_info or vcs_info.get("vcs") != "git":
-        return None
-    return info.get("url")
+    if vcs_info and vcs_info.get("vcs") == "git":
+        return {"git": info["url"]}
+
+    dir_info = info.get("dir_info")
+    if dir_info and dir_info.get("editable"):
+        url = info["url"]
+        path = url[len("file://") :] if url.startswith("file://") else url
+        return {"path": path, "editable": True}
+
+    return None
 
 
 def _dependency_name(requirement: str) -> str:
@@ -190,17 +212,17 @@ def base_dependencies(connector_name: str) -> list[str]:
 def render_script_header(connector_name: str) -> str:
     """A PEP 723 `# /// script` block declaring `base_dependencies()`
     for the project's actual connector - plus a `[tool.uv.sources]`
-    pin for `caddie` itself back to its own git remote, if that's
-    where this install of caddie came from (see `_caddie_git_source`),
-    so the sandbox resolver doesn't fall through to an unrelated,
-    same-named PyPI project."""
+    pin for `caddie` itself back to its own git remote or local
+    editable checkout, whichever this install of caddie came from (see
+    `_caddie_source_override`), so the sandbox resolver doesn't fall
+    through to an unrelated, same-named PyPI project."""
     project = {
         "requires-python": _caddie_requires_python(),
         "dependencies": base_dependencies(connector_name),
     }
-    git_source = _caddie_git_source()
-    if git_source:
-        project["tool"] = {"uv": {"sources": {"caddie": {"git": git_source}}}}
+    source_override = _caddie_source_override()
+    if source_override:
+        project["tool"] = {"uv": {"sources": {"caddie": source_override}}}
     return write_pyproject_to_script(project)
 
 
