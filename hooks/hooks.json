@@ -5,7 +5,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "caddie track-observe"
+          "command": "mkdir -p \"$HOME/.caddie/state\"; CADDIE_BIN=$(command -v caddie || echo \"$HOME/.local/bin/caddie\"); \"$CADDIE_BIN\" track-observe >>\"$HOME/.caddie/state/hooks.log\" 2>&1"
         }
       ]
     }
@@ -15,7 +15,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "caddie track-update"
+          "command": "mkdir -p \"$HOME/.caddie/state\"; CADDIE_BIN=$(command -v caddie || echo \"$HOME/.local/bin/caddie\"); \"$CADDIE_BIN\" track-update >>\"$HOME/.caddie/state/hooks.log\" 2>&1"
         }
       ]
     }

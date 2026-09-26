@@ -110,6 +110,20 @@ hooks, both in `hooks/hooks.json`:
 
 ## Open questions
 
+- **Hook commands can't assume `caddie` is on `PATH`.** Confirmed live:
+  a GUI-launched Claude Code session's hook subprocess did not inherit
+  the same `PATH` this repo's own interactive shell has, so a bare
+  `"command": "caddie track-observe"` silently no-op'd (command not
+  found is a non-blocking hook error - never surfaced, `~/.caddie/state/`
+  simply never got created). `hooks/hooks.json` now resolves the
+  binary itself (`command -v caddie`, falling back to `uv`'s default
+  `~/.local/bin/caddie`) and logs stderr to
+  `~/.caddie/state/hooks.log` for exactly this kind of silent failure
+  going forward. Also confirmed: plugin-provided hook registration
+  (`hooks/hooks.json`) appears to be read once per app process launch,
+  not per new session/conversation - editing the file and starting a
+  new session in the same running app instance did not pick it up;
+  fully quitting and relaunching did.
 - **Stability of the `cm` delete/create-cell shape.** Same caveat as
   `.specs/requirements-marimo-pair.md`: `marimo._code_mode` is a
   private, unstable API. `caddie.cost.kernel` was written against the
