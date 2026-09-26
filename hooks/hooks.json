@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "mkdir -p \"$HOME/.caddie/state\"; cat > \"$HOME/.caddie/state/last-posttooluse-input.json\"; { echo \"=== $(date -u +%FT%TZ) PostToolUse ===\"; echo \"PATH=$PATH\"; echo \"HOME=$HOME\"; command -v caddie 2>&1 || echo 'command -v caddie: not found'; \"$HOME/.local/bin/caddie\" --help >/dev/null 2>&1 && echo 'absolute caddie: OK' || echo \"absolute caddie: FAILED exit=$?\"; } >> \"$HOME/.caddie/state/hooks-debug.log\" 2>&1"
+            "command": "mkdir -p \"$HOME/.caddie/state\"; CADDIE_BIN=$(command -v caddie || echo \"$HOME/.local/bin/caddie\"); \"$CADDIE_BIN\" track-observe >>\"$HOME/.caddie/state/hooks.log\" 2>&1"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "mkdir -p \"$HOME/.caddie/state\"; cat > \"$HOME/.caddie/state/last-stop-input.json\"; { echo \"=== $(date -u +%FT%TZ) Stop ===\"; echo \"PATH=$PATH\"; echo \"HOME=$HOME\"; command -v caddie 2>&1 || echo 'command -v caddie: not found'; \"$HOME/.local/bin/caddie\" --help >/dev/null 2>&1 && echo 'absolute caddie: OK' || echo \"absolute caddie: FAILED exit=$?\"; } >> \"$HOME/.caddie/state/hooks-debug.log\" 2>&1"
+            "command": "mkdir -p \"$HOME/.caddie/state\"; CADDIE_BIN=$(command -v caddie || echo \"$HOME/.local/bin/caddie\"); \"$CADDIE_BIN\" track-update >>\"$HOME/.caddie/state/hooks.log\" 2>&1"
           }
         ]
       }
