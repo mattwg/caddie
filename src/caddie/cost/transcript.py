@@ -41,6 +41,17 @@ def _usage_from_message(message: dict) -> tuple[str, TokenUsage] | None:
 
 
 def _iter_assistant_usage(lines: list[str]):
+    """Yields (model, usage) once per distinct API response.
+
+    A single API response that spans multiple content blocks (e.g. a
+    thinking/text block plus a tool-use block) is logged as one
+    `type: "assistant"` JSONL line per block, all sharing the same
+    `message.id` - and Claude Code copies the *same* `usage` object
+    onto every one of those lines. Summing them all would count that
+    response's tokens once per block instead of once total, so this
+    dedupes by `message.id` (falling back to identity, i.e. always
+    counted, for the rare entry missing one) before yielding."""
+    seen_message_ids: set[str] = set()
     for line in lines:
         line = line.strip()
         if not line:
@@ -54,6 +65,11 @@ def _iter_assistant_usage(lines: list[str]):
         message = entry.get("message")
         if not isinstance(message, dict):
             continue
+        message_id = message.get("id")
+        if message_id is not None:
+            if message_id in seen_message_ids:
+                continue
+            seen_message_ids.add(message_id)
         result = _usage_from_message(message)
         if result is not None:
             yield result
