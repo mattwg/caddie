@@ -225,6 +225,13 @@ def _active_sessions(url: str) -> dict:
         return {}
 
 
+def active_sessions(url: str) -> dict:
+    """Public alias of `_active_sessions`, for other modules (e.g.
+    `caddie.cost.kernel`) that need to look up a project's live marimo
+    session without duplicating this HTTP call themselves."""
+    return _active_sessions(url)
+
+
 def _has_session_for(url: str, nb_path: Path) -> bool:
     target = str(nb_path)
     for info in _active_sessions(url).values():

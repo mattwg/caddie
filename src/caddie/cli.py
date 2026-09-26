@@ -2,6 +2,7 @@
 
 import argparse
 
+from caddie.cost.cli import add_subparser as add_cost_subparser
 from caddie.install.command import add_subparser as add_install_subparser
 from caddie.list.command import add_subparser as add_list_subparser
 from caddie.notebook.add_dependency import add_subparser as add_notebook_add_dependency_subparser
@@ -25,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_notebook_add_dependency_subparser(subparsers)
     add_notebook_share_subparser(subparsers)
     add_list_subparser(subparsers)
+    add_cost_subparser(subparsers)
     return parser
 
 

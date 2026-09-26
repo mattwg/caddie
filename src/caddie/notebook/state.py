@@ -13,6 +13,11 @@ something to hand-edit.
 Kept as a small sidecar JSON file rather than folded into the notebook
 itself, since none of it is meant to be hand-edited the way cell
 content is.
+
+`costs` follows the same rationale: it's a running total the
+`caddie track-update` hook maintains (see `caddie.cost.tracker`), never
+hand-edited, and the notebook's own `costs` cell is only ever a
+rendering of what's recorded here - never the other way around.
 """
 
 import json
@@ -27,6 +32,7 @@ STATE_FILENAME = ".caddie_project.json"
 class ProjectState:
     connector: str
     connector_settings: dict[str, Any] = field(default_factory=dict)
+    costs: dict[str, Any] = field(default_factory=dict)
 
 
 def state_path(project_dir: Path) -> Path:
@@ -42,6 +48,7 @@ def load_state(project_dir: Path) -> ProjectState | None:
     return ProjectState(
         connector=raw["connector"],
         connector_settings=raw.get("connector_settings", {}),
+        costs=raw.get("costs", {}),
     )
 
 
@@ -52,6 +59,7 @@ def save_state(project_dir: Path, state: ProjectState) -> None:
             {
                 "connector": state.connector,
                 "connector_settings": state.connector_settings,
+                "costs": state.costs,
             },
             indent=2,
         )

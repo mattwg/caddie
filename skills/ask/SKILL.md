@@ -54,6 +54,12 @@ Every `caddie ...` command below assumes `caddie` is already on `PATH`
 caddie`). If a command fails with `command not found`, point the user
 at `/caddie:install` rather than guessing at a workaround.
 
+Cost tracking (the notebook's `costs` cell) needs no action from this
+skill at all — a `PostToolUse` hook watches for `notebook-start`/
+`notebook-edit`'s own output and a `Stop` hook keeps the cell current,
+both independent of anything written here. See
+`.specs/requirements-cost-tracking.md`.
+
 ## Pairing with the notebook's kernel
 
 A brand-new project's notebook doesn't exist yet, so `caddie
