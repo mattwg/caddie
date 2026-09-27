@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+import sys
 
 
 def ensure_uv_installed() -> None:
@@ -10,6 +11,19 @@ def ensure_uv_installed() -> None:
     subprocess.run(
         "curl -LsSf https://astral.sh/uv/install.sh | sh",
         shell=True,
+        check=True,
+    )
+
+
+def ensure_chromium_installed() -> None:
+    """PDF export (`caddie notebook-export`, `notebook/export.py`)
+    renders via nbconvert's `--webpdf` exporter, which needs a
+    Playwright-managed Chromium - not a pip dependency, so it isn't
+    pulled in by `nbconvert[webpdf]` itself. `playwright install
+    chromium` is idempotent (a no-op if already cached), so this is
+    safe to run on every `install`/`update`."""
+    subprocess.run(
+        [sys.executable, "-m", "playwright", "install", "chromium"],
         check=True,
     )
 

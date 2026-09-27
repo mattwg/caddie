@@ -12,6 +12,8 @@ dependencies = [
     "plotly>=5.24",
     "ruamel-yaml>=0.18",
     "databricks-connect>=15.4",
+    "nbconvert[webpdf]>=7.16",
+    "nbformat>=5.10",
 ]
 
 [project.scripts]

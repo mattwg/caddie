@@ -12,7 +12,9 @@ agent did or didn't remember to do:
   session as "working on project X" (see `caddie.cost.tracker`'s
   session marker).
 - `track-update`: a `Stop` hook. Folds new session usage into the
-  tracked project's cost and refreshes its `costs` cell.
+  tracked project's cost and refreshes its `costs` cell, and (best
+  effort, in the background) relaunches `notebook-export` if the
+  project's PDF is behind its notebook - see `_launch_background_export`.
 
 `track-start` still exists as a manual/scriptable equivalent of what
 `track-observe` now does automatically - useful for testing, or a
@@ -23,6 +25,8 @@ import argparse
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -31,6 +35,7 @@ from caddie.cost import pricing, tracker
 from caddie.cost.kernel import update_costs_cell
 from caddie.install.notebooks import find_project_dir, resolve_notebooks_root
 from caddie.notebook.builder import notebook_path
+from caddie.notebook.export import pdf_path
 
 # `notebook-start` prints `notebook: <path>`, `notebook-edit` prints
 # `file: <path>` (both `notebook/start.py` and `notebook/edit.py`) -
@@ -128,6 +133,54 @@ def run_track_observe(args: argparse.Namespace) -> int:
     return 0
 
 
+def _export_stale(project_dir: Path) -> bool:
+    nb_path = notebook_path(project_dir)
+    out_path = pdf_path(project_dir)
+    if not out_path.is_file():
+        return True
+    return nb_path.stat().st_mtime > out_path.stat().st_mtime
+
+
+def _caddie_bin() -> str:
+    """Resolve the installed `caddie` console-script the same way
+    `hooks/hooks.json` does - `caddie` isn't runnable via `python -m`
+    (no `__main__.py`; it's a `uv tool install`ed entry point), so a
+    background relaunch has to find that script on PATH, falling back
+    to the same default `uv tool install` location the hook shells out
+    to when PATH lookup fails (e.g. a non-login subprocess env)."""
+    return shutil.which("caddie") or str(Path.home() / ".local" / "bin" / "caddie")
+
+
+def _launch_background_export(project_dir: Path, config_path: str | None) -> None:
+    """Fire-and-forget `caddie notebook-export`, launched from the
+    `Stop` hook so a project's PDF stays in sync with its notebook
+    after each episode/explore turn - without making `track-update`
+    (which fires every turn) wait on a `--webpdf` render.
+
+    Detached (`start_new_session=True`, all three standard streams
+    redirected) so the child outlives this hook's own short-lived
+    process rather than being torn down with it, the same way
+    `notebook/edit.py`'s `start_server` detaches the shared marimo
+    server."""
+    command = [_caddie_bin(), "notebook-export", "--project", project_dir.name]
+    if config_path:
+        command += ["--config-path", config_path]
+
+    log_path = tracker.STATE_DIR / "hooks.log"
+    tracker.STATE_DIR.mkdir(parents=True, exist_ok=True)
+    log_fh = open(log_path, "a")
+    try:
+        subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=log_fh,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    finally:
+        log_fh.close()
+
+
 def run_track_update(args: argparse.Namespace) -> int:
     try:
         payload = json.loads(sys.stdin.read() or "{}")
@@ -159,5 +212,11 @@ def run_track_update(args: argparse.Namespace) -> int:
         # session it's attached to; the next successful update reflects
         # the full accumulated total regardless.
         print(f"track-update: costs cell not updated ({exc})", file=sys.stderr)
+
+    try:
+        if _export_stale(project_dir):
+            _launch_background_export(project_dir, args.config_path)
+    except Exception as exc:  # noqa: BLE001 - same reasoning as above.
+        print(f"track-update: pdf export not launched ({exc})", file=sys.stderr)
 
     return 0

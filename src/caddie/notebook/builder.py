@@ -21,6 +21,7 @@ first place.
 
 from pathlib import Path
 
+from marimo._ast.app_config import _AppConfig
 from marimo._ast.cell import CellConfig
 from marimo._ast.codegen import generate_filecontents, get_header_comments
 from marimo._ast.load import get_notebook_status
@@ -83,7 +84,14 @@ def _write(
     configs: list[CellConfig],
     header: str | None = None,
 ) -> None:
-    path.write_text(generate_filecontents(codes, names, configs, header_comments=header))
+    # `app_title` is the project's slug (the directory name) - without
+    # it, marimo falls back to the file's stem ("notebook") as the
+    # browser tab title, which is identical across every project since
+    # every notebook is literally named `notebook.py`.
+    app_config = _AppConfig(app_title=path.parent.name)
+    path.write_text(
+        generate_filecontents(codes, names, configs, config=app_config, header_comments=header)
+    )
 
 
 def start_episode(project_dir: Path, question_markdown: str, connector: str) -> tuple[Path, int]:
@@ -126,11 +134,20 @@ def refresh_header(project_dir: Path, connector: str) -> bool:
     PyPI instead of this checkout - silently installing an unrelated,
     same-named package instead of failing loudly. `notebook-edit`
     calls this right before opening a session so the sandbox that
-    session's kernel builds is never working from that stale header."""
+    session's kernel builds is never working from that stale header.
+
+    Also retroactively applies the `app_title` fix (see `_write`) to
+    a project whose notebook predates it - there's no other retrofit
+    path, since `start_episode` only ever runs once per project."""
     path = notebook_path(project_dir)
     new_header = render_script_header(connector)
     old_header = get_header_comments(str(path))
-    if old_header is not None and old_header.strip() == new_header.strip():
+    title_marker = f"app_title={project_dir.name!r}"
+    if (
+        old_header is not None
+        and old_header.strip() == new_header.strip()
+        and title_marker in path.read_text()
+    ):
         return False
 
     codes, names, configs = _existing_cells(path)

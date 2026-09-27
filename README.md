@@ -143,6 +143,9 @@ Each of these is a Claude Code plugin skill (invoked with a namespaced
 - `/caddie:share <project>`: generate a standalone copy of a project's
   notebook with no dependency on caddie itself, for handing to someone
   who doesn't have caddie installed.
+- `/caddie:export <project>`: generate a full PDF snapshot of a
+  project's notebook (inputs and outputs included), for handing off
+  outside a browser. Refreshes automatically after each turn as well.
 - `/caddie:update`: refresh an existing setup (tooling, skill repo,
   dependencies, connector auth).
 

@@ -23,7 +23,7 @@ from caddie.connectors.loader import load_connector_from_config
 from caddie.install.marimo_pair import upgrade_marimo_pair_skill
 from caddie.install.org_config import OrgConfigError, load_org_config
 from caddie.install.skill_repo import pull_skill_repo, resolve_skill_repo
-from caddie.install.tooling import upgrade_uv
+from caddie.install.tooling import ensure_chromium_installed, upgrade_uv
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
@@ -100,6 +100,7 @@ def run(args: argparse.Namespace) -> int:
     results = run_checks(
         [
             ("uv up to date", upgrade_uv),
+            ("chromium for pdf export up to date", ensure_chromium_installed),
             ("marimo-pair skill up to date", upgrade_marimo_pair_skill),
             ("org config up to date", _refresh_org_config),
             ("skill repo up to date", _refresh_skill_repo),

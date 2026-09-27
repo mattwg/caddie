@@ -28,7 +28,7 @@ from caddie.install.marimo_pair import install_marimo_pair_skill
 from caddie.install.notebooks import ensure_notebooks_dir, resolve_notebooks_root
 from caddie.install.org_config import OrgConfigError, load_org_config
 from caddie.install.skill_repo import resolve_skill_repo
-from caddie.install.tooling import ensure_uv_installed
+from caddie.install.tooling import ensure_chromium_installed, ensure_uv_installed
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction") -> None:
@@ -183,6 +183,7 @@ def _finish_install(
     results = run_checks(
         [
             ("uv installed", ensure_uv_installed),
+            ("chromium for pdf export ready", ensure_chromium_installed),
             ("marimo-pair skill installed", install_marimo_pair_skill),
             ("notebooks root ready", lambda: ensure_notebooks_dir(notebooks_root)),
             ("connector authenticated", _authenticate),
