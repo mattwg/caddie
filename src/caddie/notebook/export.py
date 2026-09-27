@@ -31,7 +31,16 @@ class ExportError(Exception):
 
 
 def pdf_path(project_dir: Path) -> Path:
-    return project_dir / "notebook.pdf"
+    # Named after the project rather than left as `notebook.pdf` -
+    # every export would otherwise collide on that one filename once
+    # shared outside its own folder (email, Slack, an archive). The
+    # year/quarter prefix comes from the date partition
+    # (`install.notebooks.partition_dir`) the project lives under:
+    # `<root>/<year>/Q<quarter>/<month>/<date>/<slug>/`.
+    year = project_dir.parents[3].name
+    quarter = project_dir.parents[2].name
+    slug = project_dir.name
+    return project_dir / f"{year}-{quarter}-{slug}.pdf"
 
 
 def export_notebook_pdf(project_dir: Path) -> Path:
