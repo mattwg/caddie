@@ -29,6 +29,11 @@ def _usage_from_message(message: dict) -> tuple[str, TokenUsage] | None:
     usage = message.get("usage")
     if not model or not isinstance(usage, dict):
         return None
+    if model == "<synthetic>":
+        # Claude Code's own placeholder for a locally-generated assistant
+        # message (no real API call happened) - always zero tokens, and
+        # not a model `pricing.py` could ever price.
+        return None
 
     cache_creation = usage.get("cache_creation") or {}
     return model, TokenUsage(
