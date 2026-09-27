@@ -95,6 +95,13 @@ before `code_{E}_{S}` (a query, bound to `query_{E}_{S}` /
 holding the result/figure. `{E}` is the episode, `{S}` is the next step
 number — keep numbering from the current highest step in this episode.
 
+`create_cell` defaults to `hide_code=True` (see `marimo-pair`'s own
+docs) - fine for a markdown-only cell like `description_{E}_{S}`, but
+always pass `hide_code=False` for `code_{E}_{S}`/`chart_{E}_{S}` and
+`output_{E}_{S}`: these carry the actual query/chart logic, and a
+collapsed cell's source is what a reader (or a PDF/HTML export) never
+sees, not just what's hidden in the live editor until expanded.
+
 `code_{E}_{S}`/`chart_{E}_{S}` must only compute and assign — never end
 that cell on a bare variable reference (`result_{E}_{S}` or
 `chart_{E}_{S}` as the last line before `return`). Marimo auto-displays

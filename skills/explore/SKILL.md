@@ -132,6 +132,12 @@ For a **new step** the user asks for:
 - Ground a new query against the org's analytics skill (invoke it via
   the `Skill` tool, same as `data-analyst` does per step) before
   writing it — schema/column precision matters here the same way.
+- `create_cell` defaults to `hide_code=True` (see `marimo-pair`'s own
+  docs) - fine for a markdown-only `description_{N}` cell, but always
+  pass `hide_code=False` for `code_{N}`/`chart_{N}` and `output_{N}`:
+  these carry the actual query/chart logic, and a collapsed cell's
+  source is what a reader (or a PDF/HTML export) never sees, not just
+  what's hidden in the live editor until expanded.
 
 For a **revision** to an existing cell ("change that groupby to
 weekly," "fix the filter," "use a bar chart instead") — read the
