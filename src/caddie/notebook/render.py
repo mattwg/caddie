@@ -46,6 +46,14 @@ def render_notebook(project_dir: Path) -> Path:
     # PATH, so the subprocess has the `caddie` package (and whatever
     # else the notebook's setup cell imports) available - a bare
     # `marimo` could resolve to an unrelated install/environment.
+    #
+    # `--sandbox` runs the export against the notebook's own PEP 723
+    # header instead of caddie's shared venv (same mechanism
+    # `notebook/edit.py`'s `start_server` already uses for `marimo
+    # edit --sandbox`) - without it, a package added via `caddie
+    # notebook-add-dependency` is missing here even though it's
+    # available in a live edit session, and any cell that imports it
+    # throws instead of rendering.
     result = subprocess.run(
         [
             sys.executable,
@@ -56,6 +64,7 @@ def render_notebook(project_dir: Path) -> Path:
             str(nb_path),
             "-o",
             str(out_path),
+            "--sandbox",
             "-f",
             "--no-include-code",
         ],

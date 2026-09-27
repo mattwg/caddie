@@ -42,6 +42,14 @@ def export_notebook_pdf(project_dir: Path) -> Path:
     # `notebook/render.py`'s `render_notebook`: the subprocess needs
     # the `caddie` package (and whatever else the notebook's setup
     # cell imports) available, which a bare `marimo` off PATH might not.
+    #
+    # `--sandbox` runs the export against the notebook's own PEP 723
+    # header instead of caddie's shared venv (same mechanism
+    # `notebook/edit.py`'s `start_server` already uses for `marimo
+    # edit --sandbox`) - without it, a package added via `caddie
+    # notebook-add-dependency` is missing here even though it's
+    # available in a live edit session, so a cell that imports it
+    # throws and the PDF can't even show the failing input code.
     result = subprocess.run(
         [
             sys.executable,
@@ -54,6 +62,7 @@ def export_notebook_pdf(project_dir: Path) -> Path:
             "--include-inputs",
             "--include-outputs",
             "--webpdf",
+            "--sandbox",
             "-f",
             "-o",
             str(out_path),
